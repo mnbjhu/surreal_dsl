@@ -1,3 +1,4 @@
+val ktor_version: String by project
 plugins {
     kotlin("jvm") version "1.8.0"
     kotlin("plugin.serialization") version "1.8.0"
@@ -11,6 +12,10 @@ repositories {
 }
 
 dependencies {
+    implementation("io.ktor:ktor-client-core:$ktor_version")
+    implementation("io.ktor:ktor-client-cio:$ktor_version")
+    implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
     testImplementation(kotlin("test"))
 }
@@ -20,5 +25,5 @@ tasks.test {
 }
 
 kotlin {
-    jvmToolchain(18)
+    jvmToolchain(8)
 }
