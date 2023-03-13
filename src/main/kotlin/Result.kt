@@ -14,6 +14,7 @@ class ResultSetParser<T, U: KSerializer<T>>(result: U): KSerializer<ResultSet<T>
     private val timeParser = String.serializer()
     private val statusParser = String.serializer()
     private val dataParser = result
+
     override val descriptor: SerialDescriptor = buildClassSerialDescriptor("result_set"){
         element("time", timeParser.descriptor)
         element("status", statusParser.descriptor)
@@ -35,7 +36,7 @@ class ResultSetParser<T, U: KSerializer<T>>(result: U): KSerializer<ResultSet<T>
                 }
             }
         }
-        return ResultSet(data!!, status!!, time!!)
+        return ResultSet(data as T, status!!, time!!)
     }
     override fun serialize(encoder: Encoder, value: ResultSet<T>) {
         val context = encoder.beginStructure(descriptor)
