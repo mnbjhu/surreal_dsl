@@ -5,7 +5,6 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import io.ktor.util.reflect.*
 import kotlinx.serialization.*
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.nullable
@@ -147,12 +146,14 @@ suspend fun <T, U: RecordType<T>>U.create(value: T): T{
         .first().result
 }
 
-class RecordId<T, U: RecordType<T>>(key: String): StringType(key) {
+class RecordLink<T, out U: RecordType<T>>(override val reference: String, val inner: U): StringType(reference) {
+    val o: U
+        get() = inner.createReference("$reference.*") as U
     companion object {
-        fun <T, U: RecordType<T>>Table<T, U>.idOf(key: String) = RecordId<T, U>("$name:$key")
-        fun <T, U: RecordType<T>>U.emptyKey() = RecordId<T, U>("dummy")
+        fun <T, U: RecordType<T>>Table<T, U>.idOf(key: String) = RecordLink<T, U>("$name:$key", inner)
     }
 }
+
 @Serializable
 data class User(val id: String? = null, val username: String, val password: String, val data: MyDataClass)
 
@@ -163,16 +164,13 @@ val userType = TypeProducer(UserRecord("dummy"))
 val userTable = Table("user", userType)
 val user = userType.createReference("user")
 
+fun <T, U: RecordType<T>>recordLink(to: U) = TypeProducer(RecordLink("dummy", to))
+
 class UserRecord(reference: String): RecordType<User>(reference, User.serializer()){
+    override val id by recordLink(this)
     val username by stringType
     val password by stringType
     val data by myDataClassType
-    override val columns: Map<String, ReturnType<*>>
-        get() = listOf(
-            "username" to username,
-            "password" to password,
-            "data" to data
-        ).toMap()
 
     override fun createReference(reference: String): ReturnType<User> {
         return UserRecord(reference)
@@ -183,12 +181,6 @@ class MySurrealDataClass(reference: String): SurrealObject<MyDataClass>(MyDataCl
     val some by stringType
     val other by stringType
     val arrayData by array(stringType)
-    override val columns: Map<String, ReturnType<*>>
-        get() = listOf(
-            "some" to some,
-            "other" to other,
-            "arrayData" to arrayData,
-        ).toMap()
 
     override fun createReference(reference: String): ReturnType<MyDataClass> {
         return MySurrealDataClass(reference)
@@ -250,7 +242,7 @@ abstract class Relation<T>(private val name: String, serializer: KSerializer<T>)
 }
 */
 abstract class RecordType<T>(private val name: String, serializer: KSerializer<T>): SurrealObject<T>(serializer, name){
-    val id by TypeProducer<T>(emptyKey<T, RecordType<T>>())
+    abstract val id: RecordLink<T, RecordType<T>>
     protected override operator fun <t, u: ReturnType<t>>TypeProducer<t, u>.getValue(thisRef: ReturnType<T>, property: KProperty<*>): u{
         return createReference(property.name)
     }
@@ -272,7 +264,6 @@ abstract class RecordType<T>(private val name: String, serializer: KSerializer<T
 }
 
 abstract class SurrealObject<T>(override val serializer: KSerializer<T>, override val reference: String): ReturnType<T> {
-    protected abstract val columns: Map<String, ReturnType<*>>
     override fun getFieldDefinition(tableName: String): String {
         return "DEFINE FIELD $reference.* ON $tableName TYPE object;\n" + this::class.members
             .filter {
