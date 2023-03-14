@@ -17,17 +17,15 @@ import kotlin.reflect.full.isSubtypeOf
 
 val stringType = TypeProducer(StringType("dummy"))
 suspend fun main(){
-    println(user.getDefinition())
-    println(user.data.some.reference)
-    // println(user.create(User("Testing", "password", MyDataClass("thing1", "thing2", listOf("One", "Two", "Three")))))
+    schema.forEach { println(it.getDefinition()) }
     transaction {
-        +create(userTable, User(null, "Testing", "pass", MyDataClass("thing1", "thing2", listOf("1", "2", "3"))))
-        val selected by selectStarFrom(userTable)
+        +create(UserTable, User("Testing", "pass"))
+        val selected by selectStarFrom(UserTable)
         update(selected){
             it.username setAs "Updated"
-            it.data.some setAs "new_thing"
         }
     }.also { println(it) }
+
 }
 
 val client = HttpClient(CIO){
@@ -58,6 +56,18 @@ class Let<T, U: ReturnType<T>>(private val key: String, private val value: U): S
     }
 
 }
+
+abstract class Filter {
+    abstract fun getString(): String
+}
+class FilterScope() {
+    private val filters = mutableListOf<Filter>()
+    fun getString(): String{
+        return filters.joinToString(" ") { it.getString() }
+    }
+    fun where()
+}
+
 
 
 class SelectStarFrom<T, U: ReturnType<T>>(private val selector: SurrealArray<T, U>): Statement(){
@@ -97,7 +107,7 @@ class TransactionScope{
         serializers.add(ResultSetParser(serializer))
         return this
     }
-    fun <T, U: ReturnType<T>>create(table: Table<T, U>, value: T): SurrealArray<T, U> {
+    fun <T, U: RecordType<T>>create(table: Table<T, U>, value: T): SurrealArray<T, U> {
         return table.createReference("CREATE ${table.reference} CONTENT ${Json.encodeToString(table.inner.serializer, value)}") as SurrealArray<T, U>
     }
 }
@@ -111,7 +121,6 @@ class SetScope {
     infix fun <T, U: ReturnType<T>>U.setAs(value: U){
         params[this] = value
     }
-
 }
 suspend fun <T, U: ReturnType<T>>transaction(scope: TransactionScope.() -> U): T {
     val transaction = TransactionScope()
@@ -146,51 +155,31 @@ suspend fun <T, U: RecordType<T>>U.create(value: T): T{
         .first().result
 }
 
-class RecordLink<T, out U: RecordType<T>>(override val reference: String, val inner: U): StringType(reference) {
+class RecordLink<T, out U: RecordType<T>>(override val reference: String, val inner: U, val hasDefinition: Boolean = true): ReturnType<String> {
     val o: U
         get() = inner.createReference("$reference.*") as U
     companion object {
         fun <T, U: RecordType<T>>Table<T, U>.idOf(key: String) = RecordLink<T, U>("$name:$key", inner)
     }
+
+    override val serializer: KSerializer<String> = String.serializer()
+
+    override fun createReference(reference: String): ReturnType<String> = RecordLink(reference, inner, hasDefinition)
+
+    override fun getFieldDefinition(tableName: String): String {
+
+        return if(hasDefinition) "DEFINE FIELD $reference ON $tableName TYPE record(${inner.reference});" else ""
+    }
 }
 
-@Serializable
-data class User(val id: String? = null, val username: String, val password: String, val data: MyDataClass)
-
-class Table<T, U: ReturnType<T>>(val name: String, inner: U): SurrealArray<T, U>(inner, name){
-    constructor(name: String, type: TypeProducer<T, U>): this(name, type.createReference("name"))
+open class Table<T, U: RecordType<T>>(val name: String, inner: U): SurrealArray<T, U>(inner, name){
+    constructor(name: String, type: TypeProducer<T, U>): this(name, type.createReference(name))
+    fun getDefinition(): String = inner.getDefinition()
 }
-val userType = TypeProducer(UserRecord("dummy"))
-val userTable = Table("user", userType)
-val user = userType.createReference("user")
 
 fun <T, U: RecordType<T>>recordLink(to: U) = TypeProducer(RecordLink("dummy", to))
-
-class UserRecord(reference: String): RecordType<User>(reference, User.serializer()){
-    override val id by recordLink(this)
-    val username by stringType
-    val password by stringType
-    val data by myDataClassType
-
-    override fun createReference(reference: String): ReturnType<User> {
-        return UserRecord(reference)
-    }
-}
-
-class MySurrealDataClass(reference: String): SurrealObject<MyDataClass>(MyDataClass.serializer(), reference){
-    val some by stringType
-    val other by stringType
-    val arrayData by array(stringType)
-
-    override fun createReference(reference: String): ReturnType<MyDataClass> {
-        return MySurrealDataClass(reference)
-    }
-}
-val myDataClassType = TypeProducer(MySurrealDataClass("dummy"))
-
-
-@Serializable
-data class MyDataClass(val some: String, val other: String, val arrayData: List<String>)
+fun <T, U: RecordType<T>>recordLink(to: Table<T, U>) = TypeProducer(RecordLink("dummy", to.inner))
+fun <T, U: RecordType<T>>idOf(to: U) = TypeProducer(RecordLink("dummy", to, hasDefinition = false))
 
 
 interface ReturnType<T> {
@@ -210,6 +199,24 @@ open class StringType(override val reference: String): ReturnType<String> {
 
     override fun getFieldDefinition(tableName: String): String =
         "DEFINE FIELD $reference ON $tableName TYPE string;"
+}
+
+
+open class BooleanType(override val reference: String): ReturnType<Boolean> {
+
+    override val serializer: KSerializer<Boolean> = Boolean.serializer()
+
+    override fun createReference(reference: String): ReturnType<Boolean> {
+        return BooleanType(reference)
+    }
+
+    override fun getFieldDefinition(tableName: String): String =
+        "DEFINE FIELD $reference ON $tableName TYPE boolean;"
+
+    companion object {
+        val TRUE = BooleanType("TRUE")
+        val FALSE = BooleanType("FALSE")
+    }
 }
 
 fun <T, U: ReturnType<T>>array(type: TypeProducer<T, U>): TypeProducer<List<T>, SurrealArray<T, U>>{
