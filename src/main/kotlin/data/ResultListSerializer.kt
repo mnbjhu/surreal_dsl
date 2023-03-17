@@ -1,3 +1,5 @@
+package data
+
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.*
@@ -33,7 +35,7 @@ class ResultListSerializer(private val results: List<KSerializer<ResultSet<Any?>
         /*
         val context = encoder.beginStructure(descriptor)
         results.forEachIndexed { index, result ->
-            context.encodeSerializableElement(descriptor, index, result, ResultSet(value[index]))
+            context.encodeSerializableElement(descriptor, index, result, data.ResultSet(value[index]))
         }
         context.endStructure(descriptor)
 
