@@ -1,3 +1,4 @@
+import core.SurrealSchema
 import core.Table
 import core.TypeProducer
 import kotlinx.serialization.Serializable
@@ -64,5 +65,5 @@ class DataRecord(reference: String): RecordType<Data>(reference, Data.serializer
 }
 
 
-val schema = listOf(UserTable, ProductTable, CategoryTable, DataTable)
+val testSchema = SurrealSchema(listOf(UserTable, ProductTable, CategoryTable, DataTable))
 

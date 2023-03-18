@@ -2,12 +2,9 @@ package core
 
 import FilterScope
 import InLine
-import statements.Let
 import RecordType
-import statements.SelectStarFrom
 import Statement
 import data.*
-import types.SurrealArray
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -15,7 +12,10 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import statements.Let
+import statements.SelectStarFrom
 import types.ReturnType
+import types.SurrealArray
 import types.array
 import types.multiple.Multiple1
 import kotlin.reflect.KProperty
@@ -53,8 +53,8 @@ class TransactionScope{
         val scope = FilterScope()
         val result = scope.projection(inner)
         val filterText = scope.getString()
-        return array(TypeProducer(Multiple1(result, ""))).createReference("(SELECT ${result.reference} AS col1 FROM $reference" +
-                (if(filterText == "") "" else " WHERE $filterText") + ")") as SurrealArray<a, A>
+        return array(TypeProducer(Multiple1(result, ""))).createReference("SELECT ${result.reference} AS col1 FROM $reference" +
+                (if(filterText == "") "" else " $filterText")) as SurrealArray<a, A>
     }
 
     operator fun <T, U: ReturnType<T>>U.getValue(thisRef: Any?, property: KProperty<*>): U {
@@ -63,7 +63,7 @@ class TransactionScope{
         serializers.add(ResultSetParser(String.serializer().nullable))
         return let.newReference
     }
-    operator fun <T, U: ReturnType<T>>U.unaryPlus(): U{
+    operator fun <T, U: ReturnType<T>>U.unaryPlus(): U {
         statements.add(InLine(this))
         serializers.add(ResultSetParser(serializer))
         return this
@@ -91,3 +91,24 @@ suspend fun <T, U: ReturnType<T>>transaction(scope: TransactionScope.() -> U): T
         .last() as ResultSet<T>
     return r.result
 }
+
+data class SurrealServer(val host: String, val port: Int, val auth: Auth) {
+    fun namespace(name: String) = NameSpace(this, name)
+}
+
+
+sealed class Auth {
+    abstract fun HttpRequestBuilder.authenticate()
+    data class Root(val username: String, val password: String): Auth() {
+        override fun HttpRequestBuilder.authenticate(){
+            basicAuth("root", "root")
+        }
+    }
+}
+
+data class NameSpace(val server: SurrealServer, val name: String) {
+    fun database(name: String) = Database(this, name)
+}
+
+
+

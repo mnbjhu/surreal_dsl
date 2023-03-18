@@ -9,15 +9,14 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.encoding.decodeStructure
 import types.ReturnType
 
-data class Multiple1<a, A: ReturnType<a>>(val col1: A, override val reference: String): ReturnType<Multiple1.Vec<a>>{
-    data class Vec<a>(val col1: a)
+data class Multiple1<a, A: ReturnType<a>>(val col1: A, override val reference: String): ReturnType<a>{
 
-    override val serializer: KSerializer<Vec<a>> = object: KSerializer<Vec<a>>{
+    override val serializer: KSerializer<a> = object: KSerializer<a>{
         override val descriptor: SerialDescriptor = buildClassSerialDescriptor("result_set"){
             element("col1", col1.serializer.descriptor)
         }
 
-        override fun deserialize(decoder: Decoder): Vec<a> {
+        override fun deserialize(decoder: Decoder): a {
             var data: a? = null
             decoder.decodeStructure(descriptor){
                 while (true){
@@ -28,16 +27,16 @@ data class Multiple1<a, A: ReturnType<a>>(val col1: A, override val reference: S
                     }
                 }
             }
-            return Vec(data as a)
+            return data as a
         }
 
-        override fun serialize(encoder: Encoder, value: Vec<a>) {
+        override fun serialize(encoder: Encoder, value: a) {
             TODO("Not yet implemented")
         }
 
     }
 
-    override fun createReference(reference: String): ReturnType<Vec<a>> {
+    override fun createReference(reference: String): ReturnType<a> {
         return Multiple1(col1, reference)
     }
 

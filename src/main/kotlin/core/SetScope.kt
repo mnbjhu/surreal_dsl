@@ -22,7 +22,7 @@ class SetScope {
         params[this] = value
     }
      */
-    infix fun <T, U: RecordType<T>> SurrealArray<String, RecordLink<T, U>>.setAs(value: List<U>){
+    infix fun <T, U: RecordType<T>> SurrealArray<String, RecordLink<T, U>>.setAs(value: List<RecordLink<T, U>>){
         val ref = "[${value.joinToString { it.reference }}]"
         params[this] = createReference(ref)
     }
