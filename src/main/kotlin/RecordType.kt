@@ -7,10 +7,10 @@ import kotlin.reflect.full.createType
 import kotlin.reflect.full.isSubtypeOf
 
 
-abstract class RecordType<T>(private val name: String, serializer: KSerializer<T>): SurrealObject<T>(serializer, name){
+abstract class RecordType<T>(private val name: String): SurrealObject<T>(name){
     abstract val id: RecordLink<T, RecordType<T>>
-    protected override operator fun <t, u: ReturnType<t>> TypeProducer<t, u>.getValue(thisRef: ReturnType<T>, property: KProperty<*>): u{
-        return if('.' !in thisRef.reference) createReference(property.name) as u
+    override operator fun <t, u: ReturnType<t>> TypeProducer<t, u>.getValue(thisRef: ReturnType<T>, property: KProperty<*>): u{
+        return if('.' !in thisRef.reference) createReference(property.name)
         else createReference("${thisRef.reference}.${property.name}")
     }
 

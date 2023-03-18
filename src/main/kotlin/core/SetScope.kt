@@ -9,11 +9,11 @@ import types.SurrealArray
 
 class SetScope {
     private val params = mutableMapOf<ReturnType<*>, ReturnType<*>>()
-    fun getString(): String = "SET " + params.entries.joinToString { "${ it.key.reference } = ${ it.value.reference }" }
+    fun getString(): String = "SET " + params.entries.joinToString { "${ it.key.reference } = ${ if(it.value is SurrealArray<*, *>) "(${it.value.reference})" else it.value.reference }" }
     infix fun <T> ReturnType<T>.setAs(value: T){
         params[this] = createReference(Json.encodeToString(serializer, value))
     }
-    infix fun <T, U: ReturnType<T>>U.setAs(value: U){
+    infix fun <T, U: ReturnType<T>>U.setAs(value: U) {
         params[this] = value
     }
 
@@ -22,7 +22,7 @@ class SetScope {
         params[this] = value
     }
      */
-    infix fun <T, U: RecordType<T>> SurrealArray<String, RecordLink<T, U>>.setAs(value: List<RecordLink<T, U>>){
+    infix fun <T, U: RecordType<T>> SurrealArray<Linked<T>, RecordLink<T, U>>.setAs(value: List<RecordLink<T, U>>){
         val ref = "[${value.joinToString { it.reference }}]"
         params[this] = createReference(ref)
     }

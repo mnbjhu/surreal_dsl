@@ -1,5 +1,5 @@
 package core
 
-class SurrealSchema(val tables: List<Table<*, *>>) {
+open class SurrealSchema(val tables: List<Table<*, *>>) {
 
 }
