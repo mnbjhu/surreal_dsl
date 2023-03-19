@@ -20,30 +20,14 @@ class RecordLink<T, out U: RecordType<T>>(override val reference: String, privat
     }
 
     override val serializer: KSerializer<Linked<T>> = object: KSerializer<Linked<T>>{
-            override val descriptor: SerialDescriptor
-                get() = inner.serializer.descriptor
-
-            val idDescriptor = buildClassSerialDescriptor(reference){
-
-            }
+            override val descriptor: SerialDescriptor by lazy { inner.serializer.descriptor }
 
             override fun deserialize(decoder: Decoder): Linked<T> {
-                val values = mutableMapOf<String, Any?>()
                 return try {
                     Linked.Actual(inner.serializer.deserialize(decoder))
-                } catch (e: SerializationException) {
-                    var id: String? = null
-                    decoder.decodeStructure(descriptor){
-                        while (true){
-                            when(val index = decodeElementIndex(descriptor)){
-                                CompositeDecoder.DECODE_DONE -> break;
-                                else -> {
-                                    id = decodeSerializableElement(descriptor, 0, String.serializer())
-                                }
-                            }
-                        }
-                    }
-                    Linked.Reference(id!!)
+                } catch (e: Exception) {
+                    val id = decoder.decodeString()
+                    Linked.Reference(id)
                 }
             }
 
@@ -58,10 +42,7 @@ class RecordLink<T, out U: RecordType<T>>(override val reference: String, privat
 
     override fun createReference(reference: String): ReturnType<Linked<T>> = RecordLink(reference, inner, hasDefinition)
 
-    override fun getFieldDefinition(tableName: String): String {
-
-        return if(hasDefinition) "DEFINE FIELD $reference ON $tableName TYPE record(${inner.reference});" else ""
-    }
+    override fun getFieldTypeBounds(): Map<String, String> = if(hasDefinition) mapOf("" to "record(${inner.reference})") else mapOf()
 }
 
 

@@ -5,12 +5,15 @@ import InLine
 import RecordType
 import Statement
 import data.*
+import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
+import io.ktor.client.utils.EmptyContent.contentType
 import io.ktor.http.*
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import statements.Let
 import statements.SelectStarFrom
@@ -98,6 +101,24 @@ suspend fun <T, U: ReturnType<T>>transaction(scope: TransactionScope.() -> U): T
 
 data class SurrealServer(val host: String, val port: Int, val auth: Auth) {
     fun namespace(name: String) = NameSpace(this, name)
+
+    companion object {
+        suspend fun <a, A: ReturnType<a>, b, B: RecordType<b>>signIn(ns: String, db: String, scope: Scope<a, A, b, B>, key: b){
+
+            val response = client.post("http://localhost:8000/signin"){
+                contentType(ContentType.Application.Json)
+                setBody("{\"ns\": \"$ns\",\"db\": \"$db\",\"sc\": \"${scope.name}\"," + Json.encodeToString(scope.signInType.serializer, key).removePrefix("{"))
+            }
+            if(response.status != HttpStatusCode.OK) throw Exception("Failed to sign-in ${response.status} '${response.bodyAsText()}'")
+        }
+        suspend fun <a, A: ReturnType<a>, b, B: RecordType<b>>signup(ns: String, db: String, scope: Scope<a, A, b, B>, key: a){
+            val response= client.post("http://localhost:8000/signup"){
+                contentType(ContentType.Application.Json)
+                setBody("{\"ns\": \"$ns\",\"db\": \"$db\",\"sc\": \"${scope.name}\",\"creds\":" + Json.encodeToString(scope.signupType.serializer, key) + "}")
+            }
+            if(response.status != HttpStatusCode.OK) throw Exception("Failed to sign-up ${response.status} ${response.bodyAsText()}")
+        }
+    }
 }
 
 
@@ -108,11 +129,14 @@ sealed class Auth {
             basicAuth("root", "root")
         }
     }
+    object Session: Auth() {
+        override fun HttpRequestBuilder.authenticate(){
+        }
+    }
 }
 
 data class NameSpace(val server: SurrealServer, val name: String) {
     fun database(name: String) = Database(this, name)
 }
-
 
 

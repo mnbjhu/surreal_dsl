@@ -12,8 +12,7 @@ open class BooleanType(override val reference: String): ReturnType<Boolean> {
         return BooleanType(reference)
     }
 
-    override fun getFieldDefinition(tableName: String): String =
-        "DEFINE FIELD $reference ON $tableName TYPE boolean;"
+    override fun getFieldTypeBounds(): Map<String, String> = mapOf("" to "boolean")
 
     companion object {
         val TRUE = BooleanType("TRUE")

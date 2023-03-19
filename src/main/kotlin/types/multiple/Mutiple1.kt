@@ -40,7 +40,8 @@ data class Multiple1<a, A: ReturnType<a>>(val col1: A, override val reference: S
         return Multiple1(col1, reference)
     }
 
-    override fun getFieldDefinition(tableName: String): String {
+
+    override fun getFieldTypeBounds(): Map<String, String> {
         TODO("Not yet implemented")
     }
 

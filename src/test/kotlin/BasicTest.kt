@@ -1,5 +1,9 @@
+import core.Linked
+import core.SurrealServer
 import functions.eq
 import kotlinx.coroutines.runBlocking
+import org.amshove.kluent.`should be equal to`
+import org.amshove.kluent.`should be instance of`
 import org.amshove.kluent.`should contain same`
 import org.junit.jupiter.api.Test
 import types.RecordLink
@@ -61,18 +65,6 @@ class BasicTest: DatabaseTest(TestSchema){
 
     @Test
     fun `Test select record link`() {
-        val entertainment = Category("Entertainment")
-        val foodOrDrink = Category("Food or Drink")
-        val health = Category("Health")
-
-        val beans = Product("Beans")
-        val avocado = Product("Avocado")
-        val wine = Product("Wine")
-
-
-        val user1 = User("TestUser1", "Password123!")
-        val user2 = User("TestUser2", "Password123!")
-
         runBlocking {
             db.transaction {
                 +UserTable.create {  it.username setAs "TestUser1"; it.password setAs "Password123!" }
@@ -85,7 +77,55 @@ class BasicTest: DatabaseTest(TestSchema){
                 +ProductTable.create { it.name setAs "Beans"; it.categories setAs foodAndDrink.select { it.id } }
                 +ProductTable.create { it.name setAs "Avocado"; it.categories setAs foodAndDrink.select { it.id } }
                 ProductTable.create { it.name setAs "Wine"; it.categories setAs (foodAndDrink.select{ it.id } + entertainment.select { it.id }) }
+            }.first().apply {
+                name `should be equal to` "Wine"
+                categories.size `should be equal to` 2
+                categories.forEach { it `should be instance of` Linked.Reference::class }
             }
+        }
+    }
+
+    @Test
+    fun `Test fetch`() {
+        runBlocking {
+            db.transaction {
+                +UserTable.create {  it.username setAs "TestUser1"; it.password setAs "Password123!" }
+                +UserTable.create {  it.username setAs "TestUser2"; it.password setAs "Password123!" }
+
+                val entertainment by CategoryTable.create { it.name setAs "Entertainment" }
+                val foodAndDrink by CategoryTable.create { it.name setAs "Food or Drink" }
+                +CategoryTable.create { it.name setAs "Health" }
+
+                +ProductTable.create { it.name setAs "Beans"; it.categories setAs foodAndDrink.select { it.id } }
+                +ProductTable.create { it.name setAs "Avocado"; it.categories setAs foodAndDrink.select { it.id } }
+                +ProductTable.create { it.name setAs "Wine"; it.categories setAs (foodAndDrink.select{ it.id } + entertainment.select { it.id }) }
+                ProductTable.selectAll {
+                    where(it.name eq "Wine")
+                    fetch(it.categories)
+                }
+            }.first().apply {
+                name `should be equal to` "Wine"
+                categories.size `should be equal to` 2
+                categories.forEach { it `should be instance of` Linked.Actual::class }
+                categories.map{ (it as Linked.Actual).record.name } `should contain same` listOf("Entertainment", "Food or Drink")
+            }
+        }
+    }
+
+    @Test
+    fun `Test Schema Generator`(){
+        TestSchema.tables.forEach {
+            println(it.getDefinition())
+        }
+        TestSchema.scopes.forEach {
+            println(it.getDefinition())
+        }
+    }
+
+    @Test
+    fun `signup test`(){
+        runBlocking {
+            SurrealServer.signup("test", "test", UserScope, User("test", "test"))
         }
     }
 }

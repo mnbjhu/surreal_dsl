@@ -2,6 +2,7 @@ package types
 
 import core.TypeProducer
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.*
@@ -13,8 +14,8 @@ import kotlin.reflect.full.isSubtypeOf
 abstract class SurrealObject<T>(override val reference: String):
     ReturnType<T> {
 
-    val members: List<Pair<String, ReturnType<*>>> =
-         this::class.members
+    val members: List<Pair<String, ReturnType<*>>> by lazy {
+        this::class.members
             .filter {
                 it.returnType.isSubtypeOf(ReturnType::class.createType(listOf(KTypeProjection.STAR))) &&
                         it.parameters.size == 1
@@ -24,18 +25,22 @@ abstract class SurrealObject<T>(override val reference: String):
                 if(value is ReturnType<*>) it.name to value
                 else null
             }
+    }
     override val serializer: KSerializer<T> =
         object: KSerializer<T>{
-            override val descriptor: SerialDescriptor =
+            override val descriptor: SerialDescriptor by lazy {
                 buildClassSerialDescriptor(reference){
                     members.forEach {
-                        element(it.first, it.second.serializer.descriptor)
+                        if(it.second is RecordLink<*, *>){
+                            element(it.first, String.serializer().descriptor)
+                        } else element(it.first, it.second.serializer.descriptor)
                     }
                 }
+            }
 
             override fun deserialize(decoder: Decoder): T {
                 val values = mutableMapOf<String, Any?>()
-                decoder.decodeStructure(descriptor){
+                decoder.decodeStructure(descriptor) {
                     while (true){
                         when(val index = decodeElementIndex(descriptor)){
                             CompositeDecoder.DECODE_DONE -> break;
@@ -58,18 +63,20 @@ abstract class SurrealObject<T>(override val reference: String):
             }
 
         }
-    override fun getFieldDefinition(tableName: String): String {
-       return "DEFINE FIELD $reference.* ON $tableName TYPE object;\n" + this::class.members
+    override fun getFieldTypeBounds(): Map<String, String>
+    {
+        return (this::class.members
             .filter {
                 it.returnType.isSubtypeOf(ReturnType::class.createType(listOf(KTypeProjection.STAR))) &&
                     it.parameters.size == 1
             }
             .mapNotNull {
                 val value = it.call(this)
-                if(value is ReturnType<*>) value
+                if(value is ReturnType<*>) it.name to value
                 else null
             }
-            .joinToString("\n") { it.getFieldDefinition(tableName) }
+            .flatMap { f -> listOf("" to "object") + f.second.getFieldTypeBounds().entries.map { "${if(it.key != "") "${f.first}.${it.key}" else "${f.first}"}" to it.value} } )
+            .toMap()
     }
     protected open operator fun <t, u: ReturnType<t>> TypeProducer<t, u>.getValue(thisRef: ReturnType<T>, property: KProperty<*>): u{
         return createReference("${thisRef.reference}.${property.name}") as u

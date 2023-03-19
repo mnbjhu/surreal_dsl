@@ -1,9 +1,11 @@
-import core.Linked
-import core.SurrealSchema
-import core.Table
-import core.TypeProducer
+import CategoryTable.permissions
+import core.*
+import functions.and
+import functions.eq
+import kotlinx.coroutines.selects.select
 import kotlinx.serialization.Serializable
 import types.*
+import kotlin.time.Duration
 
 
 @Serializable
@@ -26,7 +28,15 @@ class UserRecord(reference: String): RecordType<User>(reference){
 
 object CategoryTable: Table<Category, CategoryRecord>("category", TypeProducer(CategoryRecord("category")))
 object ProductTable: Table<Product, ProductRecord>("product", TypeProducer(ProductRecord("product")))
-object UserTable: Table<User, UserRecord>("user", TypeProducer(UserRecord("user")))
+object UserTable: Table<User, UserRecord>("user", TypeProducer(UserRecord("user"))){
+    override fun PermissionScope.permissions(record: UserRecord) {
+        permissionsFor(PermissionType.Delete){
+            scope(UserScope){ auth ->
+                record.id eq auth.id
+            }
+        }
+    }
+}
 object DataTable: Table<Data, DataRecord>("data", TypeProducer(DataRecord("data")))
 
 @Serializable
@@ -82,7 +92,7 @@ class InnerDataType(reference: String): SurrealObject<InnerData>(reference){
 val innerDataType = TypeProducer(InnerDataType("dummy"))
 
 @Serializable
-data class Data(val name: String, val inner: InnerData)
+data class Data(val name: String, val innerData: InnerData)
 class DataRecord(reference: String): RecordType<Data>(reference){
     override val id by idOf(this)
     val name by stringType
@@ -92,13 +102,33 @@ class DataRecord(reference: String): RecordType<Data>(reference){
 
     override fun EncodeScope.encode(value: Data) {
         ::name setAs value.name
-        ::innerData setAs value.inner
+        ::innerData setAs value.innerData
     }
 
-    val inner by innerDataType
     override fun createReference(reference: String) = DataRecord(reference)
 }
 
 
-object TestSchema: SurrealSchema(listOf(UserTable, ProductTable, CategoryTable, DataTable))
+object TestSchema: SurrealSchema(listOf(UserTable, ProductTable, CategoryTable, DataTable), listOf(UserScope))
+
+object UserScope: Scope<User, UserRecord, User, UserRecord>() {
+    override val name: String = "user_session"
+    override val signupType = UserRecord("dummy")
+    override val signInType = UserRecord("dummy")
+    override val sessionDuration: Duration = Duration.parse("2h")
+
+    override fun TransactionScope.signup(credentials: UserRecord): SurrealArray<User, UserRecord> {
+        return UserTable.create {
+            it.username setAs credentials.username
+            it.password setAs credentials.password
+            it.products setAs listOf<RecordLink<Product, ProductRecord>>()
+        }
+    }
+
+    override fun TransactionScope.signIn(credentials: UserRecord): SurrealArray<User, UserRecord> {
+        return UserTable.selectAll {
+            where((it.username eq credentials.username) and (it.password eq credentials.password))
+        }
+    }
+}
 

@@ -21,9 +21,11 @@ open class SurrealArray<T, U: ReturnType<T>>(internal val inner: U, override val
     }
 
  */
-    override fun getFieldDefinition(tableName: String): String {
-        return "DEFINE FIELD $reference ON $tableName TYPE array;\n" +
-                inner.createReference("$reference.*").getFieldDefinition(tableName)
+    override fun getFieldTypeBounds(): Map<String, String> {
+        val r = listOf("" to "array") + inner.getFieldTypeBounds().entries.map {
+            it.key + "*" to it.value
+        }
+        return r.toMap()
     }
 
 }

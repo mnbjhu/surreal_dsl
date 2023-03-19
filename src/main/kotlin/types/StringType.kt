@@ -13,7 +13,7 @@ open class StringType(override val reference: String): ReturnType<String>, Surre
         return StringType(reference)
     }
 
-    override fun getFieldDefinition(tableName: String): String =
-        "DEFINE FIELD $reference ON $tableName TYPE string;"
+    override fun getFieldTypeBounds(): Map<String, String> = mapOf("" to "string")
 }
+
 val stringType = TypeProducer(StringType("dummy"))
