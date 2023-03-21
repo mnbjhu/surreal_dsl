@@ -30,9 +30,9 @@ object CategoryTable: Table<Category, CategoryRecord>("category", TypeProducer(C
 object ProductTable: Table<Product, ProductRecord>("product", TypeProducer(ProductRecord("product")))
 object UserTable: Table<User, UserRecord>("user", TypeProducer(UserRecord("user"))){
     override fun PermissionScope.permissions(record: UserRecord) {
-        permissionsFor(PermissionType.Delete){
-            scope(UserScope){ auth ->
-                record.id eq auth.id
+        permissionsFor(PermissionType.Select){
+            scope(UserScope) { auth ->
+                BooleanType.TRUE
             }
         }
     }

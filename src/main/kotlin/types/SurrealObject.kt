@@ -6,6 +6,7 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.*
+import java.lang.reflect.InvocationTargetException
 import kotlin.reflect.KProperty
 import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.createType
@@ -21,12 +22,18 @@ abstract class SurrealObject<T>(override val reference: String):
                         it.parameters.size == 1
             }
             .mapNotNull {
+        try {
+            it.call(this)
+        } catch (e: InvocationTargetException){
+            throw e.targetException
+        }
                 val value = it.call(this)
                 if(value is ReturnType<*>) it.name to value
                 else null
             }
     }
-    override val serializer: KSerializer<T> =
+    override val serializer: KSerializer<T>
+        get() =
         object: KSerializer<T>{
             override val descriptor: SerialDescriptor by lazy {
                 buildClassSerialDescriptor(reference){

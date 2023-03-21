@@ -80,44 +80,11 @@ class TransactionScope{
     }
 }
 
-suspend fun <T, U: ReturnType<T>>transaction(scope: TransactionScope.() -> U): T {
-    val transaction = TransactionScope()
-    val result =  transaction.scope()
-    transaction.serializers.add(ResultSetParser(result.serializer))
-    transaction.statements.add(InLine(result))
-    val response = client.post("http://localhost:8000/sql"){
-        contentType(ContentType.Application.Json)
-        basicAuth("root", "root")
-        header("ns", "test")
-        header("db", "test")
-        setBody(transaction.getQueryString().also { println(it) })
-    }
-    val serializer =
-        ResultListSerializer(transaction.serializers.toList() as List<ResultSetParser<Any?, KSerializer<Any?>>>)
-    val r = surrealJson.decodeFromString(serializer, response.bodyAsText().also{println(it)})
-        .last() as ResultSet<T>
-    return r.result
-}
 
-data class SurrealServer(val host: String, val port: Int, val auth: Auth) {
+data class SurrealServer(val host: String, val port: Int) {
     fun namespace(name: String) = NameSpace(this, name)
 
     companion object {
-        suspend fun <a, A: ReturnType<a>, b, B: RecordType<b>>signIn(ns: String, db: String, scope: Scope<a, A, b, B>, key: b){
-
-            val response = client.post("http://localhost:8000/signin"){
-                contentType(ContentType.Application.Json)
-                setBody("{\"ns\": \"$ns\",\"db\": \"$db\",\"sc\": \"${scope.name}\"," + Json.encodeToString(scope.signInType.serializer, key).removePrefix("{"))
-            }
-            if(response.status != HttpStatusCode.OK) throw Exception("Failed to sign-in ${response.status} '${response.bodyAsText()}'")
-        }
-        suspend fun <a, A: ReturnType<a>, b, B: RecordType<b>>signup(ns: String, db: String, scope: Scope<a, A, b, B>, key: a){
-            val response= client.post("http://localhost:8000/signup"){
-                contentType(ContentType.Application.Json)
-                setBody("{\"ns\": \"$ns\",\"db\": \"$db\",\"sc\": \"${scope.name}\",\"creds\":" + Json.encodeToString(scope.signupType.serializer, key) + "}")
-            }
-            if(response.status != HttpStatusCode.OK) throw Exception("Failed to sign-up ${response.status} ${response.bodyAsText()}")
-        }
     }
 }
 
@@ -129,8 +96,9 @@ sealed class Auth {
             basicAuth("root", "root")
         }
     }
-    object Session: Auth() {
+    class Session(private val token: String): Auth() {
         override fun HttpRequestBuilder.authenticate(){
+            bearerAuth(token)
         }
     }
 }

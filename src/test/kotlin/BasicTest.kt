@@ -125,7 +125,13 @@ class BasicTest: DatabaseTest(TestSchema){
     @Test
     fun `signup test`(){
         runBlocking {
-            SurrealServer.signup("test", "test", UserScope, User("test", "test"))
+            val userConnection = server
+                .namespace("test")
+                .database("test")
+                .signup(UserScope, User("newtest", "123"))
+            userConnection.transaction {
+                UserTable.selectAll()
+            }
         }
     }
 }

@@ -17,17 +17,16 @@ abstract class DatabaseTest(private val schema: SurrealSchema) {
 
 
     companion object {
-        private val server = SurrealServer(
+        val server = SurrealServer(
             host = "localhost",
             port = 8000,
-            auth = Auth.Root(
-                username = "root",
-                password = "root"
-            )
         )
 
-        val db = server
-            .namespace("test")
-            .database("test")
+        val db = runBlocking {
+            server
+                .namespace("test")
+                .database("test")
+                .connectAsAdmin("root", "root")
+        }
     }
 }
