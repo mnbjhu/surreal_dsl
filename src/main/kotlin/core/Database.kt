@@ -117,7 +117,7 @@ class DatabaseWebsocketConnection(val database: Database, val ws: WebSocketSessi
         val id = IdCounter.next()
         val channel = Channel<String>(1)
         channels[id] = channel
-        ws.send(Frame.Text("{\"id\":\"$id\",\"method\":\"$method\",\"params\":\"$params\"}".also { println(it) }))
+        ws.send(Frame.Text("{\"id\":\"$id\",\"method\":\"$method\",\"params\":[\"$params\"]}".also { println(it) }))
         val response = channel.receive()
         channels.remove(id)
         return surrealJson.decodeFromString(serializer, response)
@@ -131,7 +131,7 @@ class DatabaseWebsocketConnection(val database: Database, val ws: WebSocketSessi
         val serializers = transaction.serializers.toList()
                 as List<ResultSetParser<Any?, KSerializer<Any?>>>
         val serializer = ResultListSerializer(serializers)
-        val response = sendQuery(serializer, "sql", transaction.getQueryString().replace("\n", ""))
+        val response = sendQuery(serializer, "query", transaction.getQueryString())
         val r = response.last() as ResultSet<T>
         return r.result
     }

@@ -151,4 +151,5 @@ class BasicTest: DatabaseTest(TestSchema){
                 .transaction { UserTable.selectAll() }.also { println(it) }
         }
     }
+
 }

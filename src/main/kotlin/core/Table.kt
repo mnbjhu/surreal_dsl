@@ -39,7 +39,9 @@ abstract class Scope<a, A: ReturnType<a>, b, B: RecordType<b>> {
 
     fun getDefinition(): String{
         val transaction = TransactionScope()
-        return with(transaction){"DEFINE SCOPE $name SESSION $sessionDuration SIGNUP (${signup(signupType.createReference("\$creds") as A).reference}) SIGNIN (${signIn(signInType.createReference("\$creds") as B).reference})"}
+        return with(transaction){"DEFINE SCOPE $name SESSION $sessionDuration \n" +
+                "   SIGNUP (${signup(signupType.createReference("\$creds") as A).reference})\n" +
+                "   SIGNIN (${signIn(signInType.createReference("\$creds") as B).reference})"}
     }
 }
 
