@@ -2,11 +2,13 @@ import core.Linked
 import core.SurrealServer
 import functions.eq
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.time.delay
 import org.amshove.kluent.`should be equal to`
 import org.amshove.kluent.`should be instance of`
 import org.amshove.kluent.`should contain same`
 import org.junit.jupiter.api.Test
 import types.RecordLink
+import java.time.Duration
 
 
 class BasicTest: DatabaseTest(TestSchema){
@@ -132,6 +134,21 @@ class BasicTest: DatabaseTest(TestSchema){
             userConnection.transaction {
                 UserTable.selectAll()
             }
+        }
+    }
+
+    @Test
+    fun websocketTest(){
+        runBlocking {
+            server
+                .namespace("test")
+                .database("test")
+                .signup(UserScope, User("newtest", "123"))
+            server
+                .namespace("test")
+                .database("test")
+                .signInToWebsocket(UserScope, User("newtest", "123"))
+                .transaction { UserTable.selectAll() }.also { println(it) }
         }
     }
 }

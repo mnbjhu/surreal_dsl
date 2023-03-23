@@ -18,6 +18,7 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.0")
+    implementation("io.ktor:ktor-client-websockets:$ktor_version")
     testImplementation("org.amshove.kluent:kluent:1.72")
     testImplementation(kotlin("test"))
 }

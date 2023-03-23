@@ -4,9 +4,18 @@ import InLine
 import RecordType
 import data.*
 import io.ktor.client.call.*
+import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.websocket.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.forEach
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -33,6 +42,21 @@ data class Database(val nameSpace: NameSpace, val name: String){
         val authData = response.body<AuthResponse>()
         return DatabaseConnection(this, Auth.Session(authData.token))
     }
+    suspend fun <a, A: ReturnType<a>, b, B: RecordType<b>>signInToWebsocket(scope: Scope<a, A, b, B>, key: b): DatabaseWebsocketConnection{
+        val connection = client.webSocketSession("ws://${nameSpace.server.host}:${nameSpace.server.port}/rpc"){
+
+        }
+        connection.send(Frame.Text("{\"id\":\"${IdCounter.next()}\",\"method\":\"signin\",\"params\":[{\"NS\":\"${nameSpace.name}\",\"DB\":\"${name}\",\"SC\":\"${scope.name}\",\"creds\":${surrealJson.encodeToString(scope.signInType.serializer, key)}}]}".also { println(it)}))
+        return DatabaseWebsocketConnection(this, connection).also {
+            CoroutineScope(Dispatchers.IO).launch { connection.incoming.receiveAsFlow().collect { println((it as Frame.Text).readText()) } }
+        }
+
+    }
+}
+
+object IdCounter {
+    private var id: Long = 1
+    fun next() = id++
 }
 
 @Serializable
@@ -71,5 +95,44 @@ class DatabaseConnection(val database: Database, val auth: Auth){
 
     suspend fun define() {
         sendQuery("DEFINE DATABASE ${database.name}")
+    }
+}
+
+class DatabaseWebsocketConnection(val database: Database, val ws: WebSocketSession){
+    private val channels = mutableMapOf<Long, Channel<String>>()
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            ws.incoming.receiveAsFlow().collect {
+                it as Frame.Text
+                val responseText = it.readText()
+                println(responseText)
+                val match = "^\\{\"id\":\"(\\d+)\"".toRegex().find(responseText) ?: throw Exception("No response id found")
+                val id = (match.groups[1] ?: throw Exception("No response id found-")).value.toLong()
+                val channel = channels[id] ?: throw Exception("Id doesn't corrospond to any that was sent")
+                channel.send(responseText)
+            }
+        }
+    }
+    private suspend fun <T>sendQuery(serializer: KSerializer<T>, method: String, params: String): T {
+        val id = IdCounter.next()
+        val channel = Channel<String>(1)
+        channels[id] = channel
+        ws.send(Frame.Text("{\"id\":\"$id\",\"method\":\"$method\",\"params\":\"$params\"}".also { println(it) }))
+        val response = channel.receive()
+        channels.remove(id)
+        return surrealJson.decodeFromString(serializer, response)
+    }
+
+    suspend fun <T, U: ReturnType<T>>transaction(scope: TransactionScope.() -> U): T {
+        val transaction = TransactionScope()
+        val result =  transaction.scope()
+        transaction.serializers.add(ResultSetParser(result.serializer))
+        transaction.statements.add(InLine(result))
+        val serializers = transaction.serializers.toList()
+                as List<ResultSetParser<Any?, KSerializer<Any?>>>
+        val serializer = ResultListSerializer(serializers)
+        val response = sendQuery(serializer, "sql", transaction.getQueryString().replace("\n", ""))
+        val r = response.last() as ResultSet<T>
+        return r.result
     }
 }
