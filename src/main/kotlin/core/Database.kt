@@ -108,7 +108,7 @@ class DatabaseWebsocketConnection(val database: Database, val ws: WebSocketSessi
                 println(responseText)
                 val match = "^\\{\"id\":\"(\\d+)\"".toRegex().find(responseText) ?: throw Exception("No response id found")
                 val id = (match.groups[1] ?: throw Exception("No response id found-")).value.toLong()
-                val channel = channels[id] ?: throw Exception("Id doesn't corrospond to any that was sent")
+                val channel = channels[id] ?: throw Exception("Id doesn't correspond to any that was sent")
                 channel.send(responseText)
             }
         }

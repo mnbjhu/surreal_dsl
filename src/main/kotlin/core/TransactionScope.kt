@@ -39,7 +39,7 @@ class TransactionScope{
         return createReference(select.getQueryString())
     }
 
-    fun <T, U: ReturnType<T>>SurrealArray<T, U>.update(action: SetScope.(U) -> Unit): SurrealArray<T, U> {
+    fun <T, U: ReturnType<T>>SurrealArray<T, U>.update(action: context(SetScope) U.() -> Unit): SurrealArray<T, U> {
         val scope = SetScope()
         scope.action(inner)
         val ref = if(this is Table) reference else "($reference)"

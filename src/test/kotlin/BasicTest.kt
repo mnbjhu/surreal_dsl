@@ -47,7 +47,7 @@ class BasicTest: DatabaseTest(TestSchema){
         `Create test`()
         runBlocking {
             db.transaction {
-                UserTable.update { it.password setAs "NewPassword123!" }
+                UserTable.update { password setAs "NewPassword123!" }
             } `should contain same` listOf ( User("TestUser1", "NewPassword123!") )
         }
     }
