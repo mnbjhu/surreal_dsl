@@ -13,8 +13,8 @@ data class User(val username: String, val password: String)
 
 class UserRecord(reference: String): RecordType<User>(reference){
     override val id by idOf(this)
-    val username by stringType
-    val password by stringType
+    val username by StringType
+    val password by StringType
     val products by array(recordLink(ProductTable))
     override fun createReference(reference: String) = UserRecord(reference)
 
@@ -46,7 +46,7 @@ data class Category(val name: String)
 class CategoryRecord(reference: String): RecordType<Category>(reference) {
 
     override val id by idOf(this)
-    val name by stringType
+    val name by StringType
     override fun ReturnScope.decode() = Category(!::name)
 
     override fun EncodeScope.encode(value: Category){
@@ -61,7 +61,7 @@ data class Product(val name: String, val categories: List<Linked<Category>> = li
 
 class ProductRecord(reference: String): RecordType<Product>(reference){
     override val id by idOf(this)
-    val name by stringType
+    val name by StringType
     val categories by array(recordLink(CategoryTable))
 
     override fun ReturnScope.decode() = Product(!::name, !::categories)
@@ -77,8 +77,8 @@ class ProductRecord(reference: String): RecordType<Product>(reference){
 data class InnerData(val stringData: String, val arrayData: List<String>)
 
 class InnerDataType(reference: String): SurrealObject<InnerData>(reference){
-    val stringData by stringType
-    val arrayData by array(stringType)
+    val stringData by StringType
+    val arrayData by array(StringType)
     override fun ReturnScope.decode() = InnerData(!::stringData, !::arrayData)
 
     override fun EncodeScope.encode(value: InnerData) {
@@ -95,7 +95,7 @@ val innerDataType = TypeProducer(InnerDataType("dummy"))
 data class Data(val name: String, val innerData: InnerData)
 class DataRecord(reference: String): RecordType<Data>(reference){
     override val id by idOf(this)
-    val name by stringType
+    val name by StringType
     val innerData by innerDataType
     override fun ReturnScope.decode() = Data(!::name, !::innerData)
 

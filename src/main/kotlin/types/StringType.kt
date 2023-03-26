@@ -14,6 +14,9 @@ open class StringType(override val reference: String): ReturnType<String>, Surre
     }
 
     override fun getFieldTypeBounds(): Map<String, String> = mapOf("" to "string")
+
+    companion object: TypeProducer<String, StringType>(StringType("dummy"))
 }
 
-val stringType = TypeProducer(StringType("dummy"))
+
+

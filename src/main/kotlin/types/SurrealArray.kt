@@ -36,3 +36,4 @@ fun <a, A: ReturnType<a>,  T, U: RecordType<T>>SurrealArray<Linked<T>, RecordLin
     val result = inner.o.transform()
     return SurrealArray(result, "$reference.${result.reference}")
 }
+

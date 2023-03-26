@@ -14,10 +14,8 @@ open class BooleanType(override val reference: String): ReturnType<Boolean> {
 
     override fun getFieldTypeBounds(): Map<String, String> = mapOf("" to "boolean")
 
-    companion object {
+    companion object: TypeProducer<Boolean, BooleanType>(BooleanType("dummy")){
         val TRUE = BooleanType("TRUE")
         val FALSE = BooleanType("FALSE")
     }
 }
-
-val booleanType = TypeProducer(BooleanType("dummy"))

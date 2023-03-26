@@ -74,7 +74,7 @@ class BasicTest: DatabaseTest(TestSchema){
 
                 val entertainment by CategoryTable.create { name setAs "Entertainment" }
                 val foodAndDrink by CategoryTable.create { name setAs "Food or Drink" }
-                val health by CategoryTable.create { name setAs "Health" }
+                +CategoryTable.create { name setAs "Health" }
 
                 +ProductTable.create { name setAs "Beans"; categories setAs foodAndDrink.select { id } }
                 +ProductTable.create { name setAs "Avocado"; categories setAs foodAndDrink.select { id } }
@@ -91,16 +91,31 @@ class BasicTest: DatabaseTest(TestSchema){
     fun `Test fetch`() {
         runBlocking {
             db.transaction {
-                +UserTable.create {  username setAs "TestUser1"; password setAs "Password123!" }
-                +UserTable.create {  username setAs "TestUser2"; password setAs "Password123!" }
+                +UserTable.create {
+                    username setAs "TestUser1"
+                    password setAs "Password123!"
+                }
+                +UserTable.create {
+                    username setAs "TestUser2"
+                    password setAs "Password123!"
+                }
 
                 val entertainment by CategoryTable.create { name setAs "Entertainment" }
                 val foodAndDrink by CategoryTable.create { name setAs "Food or Drink" }
-                +CategoryTable.create { name setAs "Health" }
+                val health by CategoryTable.create { name setAs "Health" }
 
-                +ProductTable.create { name setAs "Beans"; categories setAs foodAndDrink.select { id } }
-                +ProductTable.create { name setAs "Avocado"; categories setAs foodAndDrink.select { id } }
-                +ProductTable.create { name setAs "Wine"; categories setAs (foodAndDrink.select{ id } + entertainment.select { id }) }
+                +ProductTable.create {
+                    name setAs "Beans"
+                    categories setAs foodAndDrink.select { id } + health.select { id }
+                }
+                +ProductTable.create {
+                    name setAs "Avocado"
+                    categories setAs foodAndDrink.select { id }
+                }
+                +ProductTable.create {
+                    name setAs "Wine"
+                    categories setAs (foodAndDrink.select{ id } + entertainment.select { id })
+                }
                 ProductTable.selectAll {
                     where(name eq "Wine")
                     fetch(categories)
@@ -151,7 +166,7 @@ class BasicTest: DatabaseTest(TestSchema){
                 .transaction { UserTable.selectAll() }.also { println(it) }
         }
     }
-    @Test
+
 
     fun liveWebsocketTest(){
         runBlocking {

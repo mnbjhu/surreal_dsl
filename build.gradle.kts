@@ -20,6 +20,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.0")
     implementation("io.ktor:ktor-client-websockets:$ktor_version")
     testImplementation("org.amshove.kluent:kluent:1.72")
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
     testImplementation(kotlin("test"))
 }
 

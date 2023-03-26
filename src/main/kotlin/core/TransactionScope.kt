@@ -33,6 +33,7 @@ class TransactionScope{
         return begin + statements.joinToString(";\n"){ it.getQueryString() } + commit
     }
 
+
     fun <T, U: ReturnType<T>>SurrealArray<T, U>.selectAll(filter: context(FilterScope) U.() -> Unit = {}): SurrealArray<T, U> {
         val filterText = FilterScope().apply{ filter(inner) }.getString()
         val select = SelectStarFrom(this, filterText)
@@ -76,7 +77,7 @@ class TransactionScope{
         return this
     }
     fun <T, U: RecordType<T>>Table<T, U>.createContent(value: T): SurrealArray<T, U> {
-        return createReference("CREATE $reference CONTENT ${Json.encodeToString(inner.serializer, value)}") as SurrealArray<T, U>
+        return createReference("CREATE $reference CONTENT ${Json.encodeToString(inner.serializer, value)}")
     }
 }
 
@@ -97,7 +98,7 @@ sealed class Auth {
         }
     }
     class Session(private val token: String): Auth() {
-        override fun HttpRequestBuilder.authenticate(){
+        override fun HttpRequestBuilder.authenticate() {
             bearerAuth(token)
         }
     }

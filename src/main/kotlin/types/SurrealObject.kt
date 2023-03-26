@@ -1,5 +1,6 @@
 package types
 
+import annotation.SurrealDsl
 import core.TypeProducer
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.serializer
@@ -12,6 +13,7 @@ import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.createType
 import kotlin.reflect.full.isSubtypeOf
 
+@SurrealDsl
 abstract class SurrealObject<T>(override val reference: String):
     ReturnType<T> {
 
