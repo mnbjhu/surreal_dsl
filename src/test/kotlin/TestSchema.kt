@@ -30,7 +30,7 @@ object CategoryTable: Table<Category, CategoryRecord>("category", TypeProducer(C
 object ProductTable: Table<Product, ProductRecord>("product", TypeProducer(ProductRecord("product")))
 object UserTable: Table<User, UserRecord>("user", TypeProducer(UserRecord("user"))){
     override fun PermissionScope.permissions(record: UserRecord) {
-        permissionsFor(PermissionType.Select){
+        permissionsFor(PermissionType.Delete){
             scope(UserScope) { auth ->
                 BooleanType.TRUE
             }
@@ -119,15 +119,15 @@ object UserScope: Scope<User, UserRecord, User, UserRecord>() {
 
     override fun TransactionScope.signup(credentials: UserRecord): SurrealArray<User, UserRecord> {
         return UserTable.create {
-            it.username setAs credentials.username
-            it.password setAs credentials.password
-            it.products setAs listOf<RecordLink<Product, ProductRecord>>()
+            username setAs credentials.username
+            password setAs credentials.password
+            products setAs listOf<RecordLink<Product, ProductRecord>>()
         }
     }
 
     override fun TransactionScope.signIn(credentials: UserRecord): SurrealArray<User, UserRecord> {
         return UserTable.selectAll {
-            where((it.username eq credentials.username) and (it.password eq credentials.password))
+            where((username eq credentials.username) and (password eq credentials.password))
         }
     }
 }

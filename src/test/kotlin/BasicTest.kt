@@ -17,9 +17,9 @@ class BasicTest: DatabaseTest(TestSchema){
         runBlocking {
             db.transaction {
                 UserTable.create {
-                    it.username setAs "TestUser1"
-                    it.password setAs "Password123!"
-                    it.products setAs listOf<RecordLink<Product, ProductRecord>>()
+                    username setAs "TestUser1"
+                    password setAs "Password123!"
+                    products setAs listOf<RecordLink<Product, ProductRecord>>()
                 }
             } `should contain same` listOf (
                 User("TestUser1", "Password123!")
@@ -33,8 +33,8 @@ class BasicTest: DatabaseTest(TestSchema){
         runBlocking {
             db.transaction {
                 UserTable.select {
-                    where(it.username eq "TestUser1")
-                    it.password
+                    where(username eq "TestUser1")
+                    password
                 }
             } `should contain same` listOf (
                 "Password123!"
@@ -69,16 +69,16 @@ class BasicTest: DatabaseTest(TestSchema){
     fun `Test select record link`() {
         runBlocking {
             db.transaction {
-                +UserTable.create {  it.username setAs "TestUser1"; it.password setAs "Password123!" }
-                +UserTable.create {  it.username setAs "TestUser2"; it.password setAs "Password123!" }
+                +UserTable.create {  username setAs "TestUser1"; password setAs "Password123!" }
+                +UserTable.create {  username setAs "TestUser2"; password setAs "Password123!" }
 
-                val entertainment by CategoryTable.create { it.name setAs "Entertainment" }
-                val foodAndDrink by CategoryTable.create { it.name setAs "Food or Drink" }
-                val health by CategoryTable.create { it.name setAs "Health" }
+                val entertainment by CategoryTable.create { name setAs "Entertainment" }
+                val foodAndDrink by CategoryTable.create { name setAs "Food or Drink" }
+                val health by CategoryTable.create { name setAs "Health" }
 
-                +ProductTable.create { it.name setAs "Beans"; it.categories setAs foodAndDrink.select { it.id } }
-                +ProductTable.create { it.name setAs "Avocado"; it.categories setAs foodAndDrink.select { it.id } }
-                ProductTable.create { it.name setAs "Wine"; it.categories setAs (foodAndDrink.select{ it.id } + entertainment.select { it.id }) }
+                +ProductTable.create { name setAs "Beans"; categories setAs foodAndDrink.select { id } }
+                +ProductTable.create { name setAs "Avocado"; categories setAs foodAndDrink.select { id } }
+                ProductTable.create { name setAs "Wine"; categories setAs (foodAndDrink.select{ id } + entertainment.select { id }) }
             }.first().apply {
                 name `should be equal to` "Wine"
                 categories.size `should be equal to` 2
@@ -91,19 +91,19 @@ class BasicTest: DatabaseTest(TestSchema){
     fun `Test fetch`() {
         runBlocking {
             db.transaction {
-                +UserTable.create {  it.username setAs "TestUser1"; it.password setAs "Password123!" }
-                +UserTable.create {  it.username setAs "TestUser2"; it.password setAs "Password123!" }
+                +UserTable.create {  username setAs "TestUser1"; password setAs "Password123!" }
+                +UserTable.create {  username setAs "TestUser2"; password setAs "Password123!" }
 
-                val entertainment by CategoryTable.create { it.name setAs "Entertainment" }
-                val foodAndDrink by CategoryTable.create { it.name setAs "Food or Drink" }
-                +CategoryTable.create { it.name setAs "Health" }
+                val entertainment by CategoryTable.create { name setAs "Entertainment" }
+                val foodAndDrink by CategoryTable.create { name setAs "Food or Drink" }
+                +CategoryTable.create { name setAs "Health" }
 
-                +ProductTable.create { it.name setAs "Beans"; it.categories setAs foodAndDrink.select { it.id } }
-                +ProductTable.create { it.name setAs "Avocado"; it.categories setAs foodAndDrink.select { it.id } }
-                +ProductTable.create { it.name setAs "Wine"; it.categories setAs (foodAndDrink.select{ it.id } + entertainment.select { it.id }) }
+                +ProductTable.create { name setAs "Beans"; categories setAs foodAndDrink.select { id } }
+                +ProductTable.create { name setAs "Avocado"; categories setAs foodAndDrink.select { id } }
+                +ProductTable.create { name setAs "Wine"; categories setAs (foodAndDrink.select{ id } + entertainment.select { id }) }
                 ProductTable.selectAll {
-                    where(it.name eq "Wine")
-                    fetch(it.categories)
+                    where(name eq "Wine")
+                    fetch(categories)
                 }
             }.first().apply {
                 name `should be equal to` "Wine"
@@ -151,5 +151,20 @@ class BasicTest: DatabaseTest(TestSchema){
                 .transaction { UserTable.selectAll() }.also { println(it) }
         }
     }
+    @Test
 
+    fun liveWebsocketTest(){
+        runBlocking {
+            server
+                .namespace("test")
+                .database("test")
+                .signup(UserScope, User("newtest", "123"))
+            server
+                .namespace("test")
+                .database("test")
+                .signInToWebsocket(UserScope, User("newtest", "123"))
+                .liveTransaction { UserTable.selectAll() }.also { println(it) }
+            while (true){}
+        }
+    }
 }

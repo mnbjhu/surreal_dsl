@@ -11,9 +11,7 @@ import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.KSerializer
@@ -108,20 +106,21 @@ class DatabaseWebsocketConnection(val database: Database, val ws: WebSocketSessi
                 println(responseText)
                 val match = "^\\{\"id\":\"(\\d+)\"".toRegex().find(responseText) ?: throw Exception("No response id found")
                 val id = (match.groups[1] ?: throw Exception("No response id found-")).value.toLong()
-                val channel = channels[id] ?: throw Exception("Id doesn't correspond to any that was sent")
+                val channel = channels[id] ?: throw Exception("Id doesn't correspond to any that was sent: '$id'")
                 channel.send(responseText)
             }
         }
     }
-    private suspend fun <T>sendQuery(serializer: KSerializer<T>, method: String, params: String): T {
+    private suspend fun sendQuery(method: String, params: String): String{
         val id = IdCounter.next()
         val channel = Channel<String>(1)
         channels[id] = channel
         ws.send(Frame.Text("{\"id\":\"$id\",\"method\":\"$method\",\"params\":[\"$params\"]}".also { println(it) }))
         val response = channel.receive()
         channels.remove(id)
-        return surrealJson.decodeFromString(serializer, response)
+        return response
     }
+
 
     suspend fun <T, U: ReturnType<T>>transaction(scope: TransactionScope.() -> U): T {
         val transaction = TransactionScope()
@@ -130,9 +129,22 @@ class DatabaseWebsocketConnection(val database: Database, val ws: WebSocketSessi
         transaction.statements.add(InLine(result))
         val serializers = transaction.serializers.toList()
                 as List<ResultSetParser<Any?, KSerializer<Any?>>>
-        val serializer = ResultListSerializer(serializers)
-        val response = sendQuery(serializer, "query", transaction.getQueryString())
-        val r = response.last() as ResultSet<T>
+        val serializer = WebSocketResponseSerializer(ResultListSerializer(serializers))
+        val response = sendQuery("query", transaction.getQueryString())
+        surrealJson.decodeFromString(serializer, response)
+        response as WebsocketResponse.Success<List<*>>
+        val r = response.result.first() as ResultSet<T>
         return r.result
+    }
+
+    suspend fun <T, U: ReturnType<T>>liveTransaction(scope: TransactionScope.() -> U){
+        val transaction = TransactionScope()
+        val result =  transaction.scope()
+        transaction.serializers.add(ResultSetParser(result.serializer))
+        transaction.statements.add(InLine(result))
+        val serializers = transaction.serializers.toList()
+                as List<ResultSetParser<Any?, KSerializer<Any?>>>
+        val serializer = WebSocketResponseSerializer(ResultListSerializer(serializers))
+        println(sendQuery("live", transaction.getQueryString()))
     }
 }

@@ -33,7 +33,7 @@ class TransactionScope{
         return begin + statements.joinToString(";\n"){ it.getQueryString() } + commit
     }
 
-    fun <T, U: ReturnType<T>>SurrealArray<T, U>.selectAll(filter: FilterScope.(U) -> Unit = {}): SurrealArray<T, U> {
+    fun <T, U: ReturnType<T>>SurrealArray<T, U>.selectAll(filter: context(FilterScope) U.() -> Unit = {}): SurrealArray<T, U> {
         val filterText = FilterScope().apply{ filter(inner) }.getString()
         val select = SelectStarFrom(this, filterText)
         return createReference(select.getQueryString())
@@ -46,14 +46,14 @@ class TransactionScope{
         return createReference("UPDATE $ref ${scope.getString()}")
     }
 
-    fun <T, U: ReturnType<T>>SurrealArray<T, U>.create(action: SetScope.(U) -> Unit): SurrealArray<T, U> {
+    fun <T, U: ReturnType<T>>SurrealArray<T, U>.create(action: context(SetScope) U.() -> Unit): SurrealArray<T, U> {
         val scope = SetScope()
         scope.action(inner)
         val ref = if(this is Table) reference else "($reference)"
         return createReference("CREATE $ref ${scope.getString()}")
     }
 
-    fun <T, U: ReturnType<T>, a, A: ReturnType<a>>SurrealArray<T, U>.select(projection: FilterScope.(U) -> A): SurrealArray<a, A> {
+    fun <T, U: ReturnType<T>, a, A: ReturnType<a>>SurrealArray<T, U>.select(projection: context(FilterScope) U.() -> A): SurrealArray<a, A> {
         val scope = FilterScope()
         val result = scope.projection(inner)
         val filterText = scope.getString()
