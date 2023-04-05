@@ -26,7 +26,7 @@ object SurrealString {
     fun replace(text: StringType, searchText: String, replaceText: StringType) = StringType.createReference("string::replace(${text.reference},${surrealJson.encodeToString(String.serializer(), searchText)},${replaceText.reference})")
     fun replace(text: StringType, searchText: StringType, replaceText: StringType) = StringType.createReference("string::replace(${text.reference},${searchText.reference},${replaceText.reference})")
 
-    fun join(deliminator: StringType, vararg items: StringType) = StringType.createReference("string::join(${deliminator.reference},${items.joinToString(","){ it.reference }})")
+    fun join(deliminator: StringType, vararg items: StringType) = StringType.createReference("string::join(${deliminator.reference},${items.joinToString(","){ it.reference!! }})")
 
     fun length(value: StringType) = LongType.createReference("string::length(${value.reference})")
 

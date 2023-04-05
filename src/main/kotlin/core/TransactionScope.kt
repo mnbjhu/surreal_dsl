@@ -21,6 +21,7 @@ import types.ReturnType
 import types.SurrealArray
 import types.array
 import types.multiple.Multiple1
+import kotlin.reflect.KFunction0
 import kotlin.reflect.KProperty
 
 class TransactionScope{
@@ -33,33 +34,71 @@ class TransactionScope{
         return begin + statements.joinToString(";\n"){ it.getQueryString() } + commit
     }
 
+    fun getUnwrappedQueryString(): String {
+        return statements.joinToString(";\n"){ it.getQueryString() }
+    }
 
+    fun <T, U: RecordType<T>>KFunction0<U>.selectAll(filter: context(FilterScope) U.() -> Unit = {}): SurrealArray<T, U> {
+        val instance = call().apply { withReference(tableName) }
+        val filterText = FilterScope().apply { filter(instance) }.getString()
+        val select = SelectStarFrom(instance, filterText)
+        return array(TypeProducer(instance)).createReference(select.getQueryString())
+    }
     fun <T, U: ReturnType<T>>SurrealArray<T, U>.selectAll(filter: context(FilterScope) U.() -> Unit = {}): SurrealArray<T, U> {
         val filterText = FilterScope().apply{ filter(inner) }.getString()
         val select = SelectStarFrom(this, filterText)
         return createReference(select.getQueryString())
     }
 
+    fun <T, U: RecordType<T>>KFunction0<U>.update(action: context(SetScope) U.() -> Unit): SurrealArray<T, U> {
+        val instance = call().apply { withReference(tableName) }
+        val scope = SetScope()
+        scope.action(instance)
+        return array(TypeProducer(instance)).createReference("UPDATE ${instance.tableName} ${scope.getString()}")
+    }
+
     fun <T, U: ReturnType<T>>SurrealArray<T, U>.update(action: context(SetScope) U.() -> Unit): SurrealArray<T, U> {
         val scope = SetScope()
         scope.action(inner)
-        val ref = if(this is Table) reference else "($reference)"
+        val ref = "($reference)"
         return createReference("UPDATE $ref ${scope.getString()}")
     }
 
     fun <T, U: ReturnType<T>>SurrealArray<T, U>.create(action: context(SetScope) U.() -> Unit): SurrealArray<T, U> {
         val scope = SetScope()
         scope.action(inner)
-        val ref = if(this is Table) reference else "($reference)"
+        val ref = "($reference)"
         return createReference("CREATE $ref ${scope.getString()}")
+    }
+
+    fun <T, U: RecordType<T>>KFunction0<U>.create(action: context(SetScope) U.() -> Unit): SurrealArray<T, U> {
+        val scope = SetScope()
+        val instance = call().apply { withReference(tableName) }
+        scope.action(instance)
+        return array(TypeProducer(instance)).createReference("CREATE ${instance.tableName} ${scope.getString()}")
+    }
+
+    fun <T, U: RecordType<T>>KFunction0<U>.createContent(value: T): SurrealArray<T, U> {
+        val instance = call().apply { withReference(tableName) }
+        return array(TypeProducer(instance)).createReference("CREATE ${instance.reference} CONTENT ${Json.encodeToString(instance.serializer, value)}")
+    }
+
+    fun <T, U: RecordType<T>, a, A: ReturnType<a>>KFunction0<U>.select(projection: context(FilterScope) U.() -> A): SurrealArray<a, A> {
+        val scope = FilterScope()
+        val instance = call().apply { withReference(tableName) }
+        val result = scope.projection(instance)
+        val filterText = scope.getString()
+        val wrappedReference = "${instance.reference}"
+        return array(TypeProducer(Multiple1(result))).createReference("SELECT ${result.reference} AS col1 FROM $wrappedReference" +
+                (if(filterText == "") "" else " $filterText")) as SurrealArray<a, A>
     }
 
     fun <T, U: ReturnType<T>, a, A: ReturnType<a>>SurrealArray<T, U>.select(projection: context(FilterScope) U.() -> A): SurrealArray<a, A> {
         val scope = FilterScope()
         val result = scope.projection(inner)
         val filterText = scope.getString()
-        val wrappedReference = if(this is SurrealArray) reference else "($reference)"
-        return array(TypeProducer(Multiple1(result, ""))).createReference("SELECT ${result.reference} AS col1 FROM $wrappedReference" +
+        val wrappedReference = "($reference)"
+        return array(TypeProducer(Multiple1(result))).createReference("SELECT ${result.reference} AS col1 FROM $wrappedReference" +
                 (if(filterText == "") "" else " $filterText")) as SurrealArray<a, A>
     }
 
@@ -76,9 +115,12 @@ class TransactionScope{
         serializers.add(ResultSetParser(serializer))
         return this
     }
+    /*
     fun <T, U: RecordType<T>>Table<T, U>.createContent(value: T): SurrealArray<T, U> {
         return createReference("CREATE $reference CONTENT ${Json.encodeToString(inner.serializer, value)}")
     }
+
+     */
 }
 
 

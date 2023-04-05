@@ -9,7 +9,7 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.encoding.decodeStructure
 import types.ReturnType
 
-data class Multiple1<a, A: ReturnType<a>>(val col1: A, override val reference: String): ReturnType<a>{
+data class Multiple1<a, A: ReturnType<a>>(val col1: A): ReturnType<a>{
 
     override val serializer: KSerializer<a> = object: KSerializer<a>{
         override val descriptor: SerialDescriptor = buildClassSerialDescriptor("result_set"){
@@ -35,9 +35,10 @@ data class Multiple1<a, A: ReturnType<a>>(val col1: A, override val reference: S
         }
 
     }
+    override var reference: String? = null
 
     override fun createReference(reference: String): ReturnType<a> {
-        return Multiple1(col1, reference)
+        return Multiple1(col1).withReference(reference)
     }
 
 

@@ -10,7 +10,7 @@ class FilterScope() {
     private val filters = mutableListOf<Filter>()
     private val toFetch = mutableListOf<ReturnType<*>>()
     fun getString(): String{
-        return filters.joinToString(" ") { it.getString() } + if(toFetch.isNotEmpty()) " FETCH ${toFetch.joinToString { it.reference }}" else ""
+        return filters.joinToString(" ") { it.getString() } + if(toFetch.isNotEmpty()) " FETCH ${toFetch.joinToString { it.reference!! }}" else ""
     }
     fun where(condition: BooleanType){
         filters.add(Where(condition))

@@ -17,9 +17,14 @@ object Math {
     fun fixed(number: DoubleType, decimalPlaces: Long) = LongType.createReference("math::fixed(${number.reference}, $decimalPlaces)")
     fun max(array: SurrealArray<Double, DoubleType>) = array.inner.createReference("array::max(${array.reference})")
     fun min(array: SurrealArray<Double, DoubleType>) = array.inner.createReference("array::min(${array.reference})")
+    @JvmName("longMin")
     fun max(array: SurrealArray<Long, LongType>) = array.inner.createReference("array::max(${array.reference})")
+
+    @JvmName("longMax")
     fun min(array: SurrealArray<Long, LongType>) = array.inner.createReference("array::min(${array.reference})")
+
     fun mean(array: SurrealArray<Double, DoubleType>) = DoubleType.createReference("array::mean(${array.reference})")
+    @JvmName("longMean")
     fun mean(array: SurrealArray<Long, LongType>) = DoubleType.createReference("array::mean(${array.reference})")
     fun median(array: SurrealArray<Double, DoubleType>) = DoubleType.createReference("array::median(${array.reference})")
     fun median(array: SurrealArray<Long, LongType>) = LongType.createReference("array::median(${array.reference})")

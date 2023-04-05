@@ -3,6 +3,7 @@ package core
 import InLine
 import RecordType
 import data.*
+import getDefinition
 import io.ktor.client.call.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
@@ -12,8 +13,10 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -22,7 +25,7 @@ import types.ReturnType
 data class Database(val nameSpace: NameSpace, val name: String){
     fun connectAsAdmin(username: String, password: String) = DatabaseConnection(this, Auth.Root(username, password))
 
-    suspend fun <a, A: ReturnType<a>, b, B: RecordType<b>>signIn( scope: Scope<a, A, b, B>, key: b): DatabaseConnection{
+    suspend fun <a, A: ReturnType<a>, b, B: RecordType<b>>signIn( scope: Scope<*, *, b, B, *, *>, key: b): DatabaseConnection{
         val response = client.post("http://${nameSpace.server.host}:${nameSpace.server.port}/signin"){
             contentType(ContentType.Application.Json)
             setBody("{\"ns\": \"${nameSpace.name}\",\"db\": \"${name}\",\"sc\": \"${scope.name}\", \"creds\":" + Json.encodeToString(scope.signInType.serializer, key)  + "}")
@@ -31,24 +34,25 @@ data class Database(val nameSpace: NameSpace, val name: String){
         val authData = response.body<AuthResponse>()
         return DatabaseConnection(this, Auth.Session(authData.token))
     }
-    suspend fun <a, A: ReturnType<a>, b, B: RecordType<b>>signup(scope: Scope<a, A, b, B>, key: a): DatabaseConnection {
+    suspend fun <a, A: ReturnType<a>>signup(scope: Scope<a, A, *, *, *, *>, key: a): DatabaseConnection {
         val response = client.post("http://${nameSpace.server.host}:${nameSpace.server.port}/signup"){
             contentType(ContentType.Application.Json)
-            setBody("{\"ns\": \"${nameSpace.name}\",\"db\": \"${name}\",\"sc\": \"${scope.name}\", \"creds\":" + Json.encodeToString(scope.signupType.serializer, key)  + "}")
+            setBody("{\"ns\": \"${nameSpace.name}\",\"db\": \"${name}\",\"sc\": \"${scope.name}\", \"creds\":" + Json.encodeToString(scope.signupType.createReference("creds").serializer, key)  + "}")
         }
         if(response.status != HttpStatusCode.OK) throw Exception("Failed to sign-up ${response.status} ${response.bodyAsText()}")
         val authData = response.body<AuthResponse>()
         return DatabaseConnection(this, Auth.Session(authData.token))
     }
-    suspend fun <a, A: ReturnType<a>, b, B: RecordType<b>>signInToWebsocket(scope: Scope<a, A, b, B>, key: b): DatabaseWebsocketConnection{
+    suspend fun <b, B: ReturnType<b>>signInToWebsocket(scope: Scope<*, *, b, B, *, *>, key: b): DatabaseWebsocketConnection {
         val connection = client.webSocketSession("ws://${nameSpace.server.host}:${nameSpace.server.port}/rpc"){
 
         }
-        connection.send(Frame.Text("{\"id\":\"${IdCounter.next()}\",\"method\":\"signin\",\"params\":[{\"NS\":\"${nameSpace.name}\",\"DB\":\"${name}\",\"SC\":\"${scope.name}\",\"creds\":${surrealJson.encodeToString(scope.signInType.serializer, key)}}]}".also { println(it)}))
-        return DatabaseWebsocketConnection(this, connection).also {
-            CoroutineScope(Dispatchers.IO).launch { connection.incoming.receiveAsFlow().collect { println((it as Frame.Text).readText()) } }
+        connection.send(Frame.Text("{\"id\":\"${IdCounter.next()}\",\"method\":\"signin\",\"params\":[{\"NS\":\"${nameSpace.name}\",\"DB\":\"${name}\",\"SC\":\"${scope.name}\",\"creds\":${surrealJson.encodeToString(scope.signInType.createReference("creds").serializer, key)}}]}".also { println(it)}))
+        println((connection.incoming.receive() as Frame.Text).readText())
+        return DatabaseWebsocketConnection(this@Database, connection).also {
+            val flow = connection.incoming.receiveAsFlow()
+            CoroutineScope(Dispatchers.IO).launch { flow.collect { println((it as Frame.Text).readText()) } }
         }
-
     }
 }
 
@@ -76,7 +80,7 @@ class DatabaseConnection(val database: Database, val auth: Auth){
     }
 
     suspend fun setSchema(schema: SurrealSchema){
-        sendQuery("BEGIN TRANSACTION; ${schema.tables.joinToString("\n") { it.getDefinition() }} ${schema.scopes.joinToString(";\n") { it.getDefinition() }};  COMMIT TRANSACTION;")
+        sendQuery("BEGIN TRANSACTION; ${schema.tables.joinToString("\n") { it.getDefinition() }} ${schema.scopes.joinToString(";\n") { it.getDefinition() }};  COMMIT TRANSACTION;".also { println(it) })
     }
 
     private suspend fun sendQuery(query: String) = client.post("http://localhost:8000/sql"){
@@ -145,6 +149,6 @@ class DatabaseWebsocketConnection(val database: Database, val ws: WebSocketSessi
         val serializers = transaction.serializers.toList()
                 as List<ResultSetParser<Any?, KSerializer<Any?>>>
         val serializer = WebSocketResponseSerializer(ResultListSerializer(serializers))
-        println(sendQuery("live", transaction.getQueryString()))
+        println(sendQuery("live", ""))
     }
 }

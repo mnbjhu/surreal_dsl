@@ -5,12 +5,12 @@ import core.TypeProducer
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.serializer
 
-open class DoubleType(override val reference: String): ReturnType<Double>, SurrealComparable<Double> {
+open class DoubleType(): Primitive<Double>(), SurrealComparable<Double> {
 
     override val serializer: KSerializer<Double> = Double.serializer()
 
     override fun createReference(reference: String): DoubleType {
-        return DoubleType(reference)
+        return DoubleType().withReference(reference)
     }
 
     override fun getFieldTypeBounds(): Map<String, String> = mapOf("" to "float")
@@ -30,5 +30,5 @@ open class DoubleType(override val reference: String): ReturnType<Double>, Surre
     operator fun div(other: DoubleType) = DoubleType.createReference("($reference / ${other.reference})")
     operator fun div(other: LongType) = DoubleType.createReference("($reference / ${other.reference})")
     operator fun div(other: Number) = DoubleType.createReference("($reference / $other)")
-    companion object: TypeProducer<Double, DoubleType>(DoubleType("dummy"))
+    companion object: TypeProducer<Double, DoubleType>(DoubleType())
 }

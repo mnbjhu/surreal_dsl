@@ -4,10 +4,10 @@ import RecordType
 import types.BooleanType
 import types.ReturnType
 import types.SurrealArray
-import kotlin.reflect.KProperty
 import kotlin.time.Duration
 
-open class Table<T, U: RecordType<T>>(val name: String, inner: U): SurrealArray<T, U>(inner, name){
+/*
+open class Table<T, U: RecordType<T>>(val name: String, inner: U): SurrealArray<T, U>(inner){
     constructor(name: String, type: TypeProducer<T, U>): this(name, type.createReference(name))
     fun getDefinition(): String {
         val fieldTypeBounds = inner.getFieldTypeBounds()
@@ -24,18 +24,20 @@ open class Table<T, U: RecordType<T>>(val name: String, inner: U): SurrealArray<
             } else null
         }.joinToString(";\n", postfix = ";\n")
     }
-    open fun PermissionScope.permissions(record: U){}
 }
 
-abstract class Scope<a, A: ReturnType<a>, b, B: RecordType<b>> {
+ */
+
+abstract class Scope<a, A: ReturnType<a>, b, B: ReturnType<b>, c, C: ReturnType<c>> {
     abstract val name: String
     abstract val signupType: A
     abstract val signInType: B
+    abstract val tokenType: C
     abstract val sessionDuration: Duration
 
-    abstract fun TransactionScope.signup(credentials: A): SurrealArray<b, B>
+    abstract fun TransactionScope.signup(credentials: A): SurrealArray<c, C>
 
-    abstract fun TransactionScope.signIn(credentials: B): SurrealArray<b, B>
+    abstract fun TransactionScope.signIn(credentials: B): SurrealArray<c, C>
 
     fun getDefinition(): String{
         val transaction = TransactionScope()
@@ -45,6 +47,7 @@ abstract class Scope<a, A: ReturnType<a>, b, B: RecordType<b>> {
     }
 }
 
+/*
 class PermissionScope {
 
 
@@ -53,10 +56,10 @@ class PermissionScope {
     val fieldPermissions = mutableMapOf<String, Permission>()
 
     fun <T, U: ReturnType<T>>U.none(){
-        fieldPermissions[reference] = Permission.None
+        fieldPermissions[reference!!] = Permission.None
     }
     fun <T, U: ReturnType<T>>U.full(){
-        fieldPermissions[reference] = Permission.Full
+        fieldPermissions[reference!!] = Permission.Full
     }
     fun none(){
         tablePermissions.add(Permission.None)
@@ -70,7 +73,6 @@ class PermissionScope {
         tablePermissions.add(Permission.For(type, builder.getExpression()))
     }
 }
-
 class PermissionBuilder(){
     private val typeBranch = mutableMapOf<Scope<*, *, *, *>, BooleanType>()
     fun <T, U: RecordType<T>>scope(scope: Scope<*, *, T, U>, where: (U) -> BooleanType){
@@ -80,6 +82,8 @@ class PermissionBuilder(){
         return typeBranch.entries.joinToString(" ELSE IF ", "IF ", " END") { "\$scope = \"${it.key.name}\" THEN ${it.value.reference}" }
     }
 }
+
+ */
 
 sealed class Permission {
 

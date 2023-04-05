@@ -8,7 +8,7 @@ class Rand {
 
     fun bool() = BooleanType.createReference("rand::bool()")
     fun float() = DoubleType.createReference("rand::float()")
-    fun <T, U: ReturnType<T>>enum(vararg values: U) = BooleanType.createReference("rand::enum(${values.joinToString(",") { it.reference }})")
+    fun <T, U: ReturnType<T>>enum(vararg values: U) = BooleanType.createReference("rand::enum(${values.joinToString(",") { it.reference!! }})")
     fun guid() = StringType.createReference("rand::guid()")
     fun uuid() = StringType.createReference("rand::uuid()")
     fun int() = LongType.createReference("rand::int()")

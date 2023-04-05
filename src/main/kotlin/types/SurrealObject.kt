@@ -12,16 +12,16 @@ import kotlin.reflect.KProperty
 import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.createType
 import kotlin.reflect.full.isSubtypeOf
+import kotlin.reflect.full.primaryConstructor
 
 @SurrealDsl
-abstract class SurrealObject<T>(override val reference: String):
-    ReturnType<T> {
-
+abstract class SurrealObject<T>(): ReturnType<T> {
+    override var reference: String? = null
     val members: List<Pair<String, ReturnType<*>>> by lazy {
         this::class.members
             .filter {
                 it.returnType.isSubtypeOf(ReturnType::class.createType(listOf(KTypeProjection.STAR))) &&
-                        it.parameters.size == 1
+                    it.parameters.size == 1
             }
             .mapNotNull {
         try {
@@ -29,16 +29,20 @@ abstract class SurrealObject<T>(override val reference: String):
         } catch (e: InvocationTargetException){
             throw e.targetException
         }
-                val value = it.call(this)
-                if(value is ReturnType<*>) it.name to value
-                else null
-            }
+            val value = it.call(this)
+            if(value is ReturnType<*>) it.name to value
+            else null
+        }
+    }
+
+    override fun createReference(reference: String): ReturnType<T> {
+        return this::class.primaryConstructor!!.call().withReference(reference)
     }
     override val serializer: KSerializer<T>
         get() =
         object: KSerializer<T>{
             override val descriptor: SerialDescriptor by lazy {
-                buildClassSerialDescriptor(reference){
+                buildClassSerialDescriptor(reference!!){
                     members.forEach {
                         if(it.second is RecordLink<*, *>){
                             element(it.first, String.serializer().descriptor)

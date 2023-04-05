@@ -12,16 +12,16 @@ object Crypto {
 
     object Argon2 {
         fun compare(hash: StringType, pass: StringType) = BooleanType.createReference("crypto::argon2::compare(${hash.reference},${pass.reference})")
-        fun generate(pass: StringType) = BooleanType.createReference("crypto::argon2::generate(${pass.reference})")
+        fun generate(pass: StringType) = StringType.createReference("crypto::argon2::generate(${pass.reference})")
     }
 
     object Pbkdf2 {
         fun compare(hash: StringType, pass: StringType) = BooleanType.createReference("crypto::pbkdf2::compare(${hash.reference},${pass.reference})")
-        fun generate(pass: StringType) = BooleanType.createReference("crypto::pbkdf::generate(${pass.reference})")
+        fun generate(pass: StringType) = StringType.createReference("crypto::pbkdf::generate(${pass.reference})")
     }
 
     object Scrypt {
         fun compare(hash: StringType, pass: StringType) = BooleanType.createReference("crypto::scrypt::compare(${hash.reference},${pass.reference})")
-        fun generate(pass: StringType) = BooleanType.createReference("crypto::scrypt::generate(${pass.reference})")
+        fun generate(pass: StringType) = StringType.createReference("crypto::scrypt::generate(${pass.reference})")
     }
 }

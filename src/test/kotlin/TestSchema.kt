@@ -1,31 +1,33 @@
-import CategoryTable.permissions
 import core.*
-import functions.and
-import functions.eq
+import functions.*
 import kotlinx.coroutines.selects.select
 import kotlinx.serialization.Serializable
 import types.*
 import kotlin.time.Duration
+import functions.Crypto
 
 
 @Serializable
 data class User(val username: String, val password: String)
 
-class UserRecord(reference: String): RecordType<User>(reference){
+class UserRecord: RecordType<User>("user") {
     override val id by idOf(this)
     val username by StringType
+        .assert { SurrealString.length(it) greaterThan 8 }
     val password by StringType
-    val products by array(recordLink(ProductTable))
-    override fun createReference(reference: String) = UserRecord(reference)
+    val products by array(recordLink(::ProductRecord))
 
     override fun ReturnScope.decode() = User(!::username, !::password)
 
-    override fun EncodeScope.encode(value: User){
+    override fun EncodeScope.encode(value: User) {
         ::username setAs value.username
         ::password setAs value.password
     }
 }
 
+
+
+/*
 object CategoryTable: Table<Category, CategoryRecord>("category", TypeProducer(CategoryRecord("category")))
 object ProductTable: Table<Product, ProductRecord>("product", TypeProducer(ProductRecord("product")))
 object UserTable: Table<User, UserRecord>("user", TypeProducer(UserRecord("user"))){
@@ -39,11 +41,14 @@ object UserTable: Table<User, UserRecord>("user", TypeProducer(UserRecord("user"
 }
 object DataTable: Table<Data, DataRecord>("data", TypeProducer(DataRecord("data")))
 
+
+ */
+
 @Serializable
 data class Category(val name: String)
 
 
-class CategoryRecord(reference: String): RecordType<Category>(reference) {
+class CategoryRecord: RecordType<Category>("category") {
 
     override val id by idOf(this)
     val name by StringType
@@ -53,16 +58,16 @@ class CategoryRecord(reference: String): RecordType<Category>(reference) {
         ::name setAs value.name
     }
 
-    override fun createReference(reference: String) = CategoryRecord(reference)
 
 }
 @Serializable
 data class Product(val name: String, val categories: List<Linked<Category>> = listOf())
 
-class ProductRecord(reference: String): RecordType<Product>(reference){
+class ProductRecord: RecordType<Product>("product"){
     override val id by idOf(this)
     val name by StringType
-    val categories by array(recordLink(CategoryTable))
+    val age by LongType
+    val categories by array(recordLink(::CategoryRecord))
 
     override fun ReturnScope.decode() = Product(!::name, !::categories)
     override fun EncodeScope.encode(value: Product) {
@@ -70,13 +75,25 @@ class ProductRecord(reference: String): RecordType<Product>(reference){
         ::categories setAs value.categories
     }
 
-    override fun createReference(reference: String) = ProductRecord(reference)
 }
 
 @Serializable
 data class InnerData(val stringData: String, val arrayData: List<String>)
 
-class InnerDataType(reference: String): SurrealObject<InnerData>(reference){
+@Serializable
+data class UserCredentials(val username: String, val password: String)
+class UserCredentialsType: SurrealObject<UserCredentials>(){
+    val username by StringType
+    val password by StringType
+    override fun ReturnScope.decode() = UserCredentials(!::username, !::password)
+
+    override fun EncodeScope.encode(value: UserCredentials) {
+        ::username setAs value.username
+        ::password setAs value.password
+    }
+}
+
+class InnerDataType: SurrealObject<InnerData>(){
     val stringData by StringType
     val arrayData by array(StringType)
     override fun ReturnScope.decode() = InnerData(!::stringData, !::arrayData)
@@ -86,14 +103,13 @@ class InnerDataType(reference: String): SurrealObject<InnerData>(reference){
         ::arrayData setAs value.arrayData
     }
 
-    override fun createReference(reference: String) = InnerDataType(reference)
 }
 
-val innerDataType = TypeProducer(InnerDataType("dummy"))
+val innerDataType = TypeProducer(InnerDataType())
 
 @Serializable
 data class Data(val name: String, val innerData: InnerData)
-class DataRecord(reference: String): RecordType<Data>(reference){
+class DataRecord: RecordType<Data>("data"){
     override val id by idOf(this)
     val name by StringType
     val innerData by innerDataType
@@ -105,29 +121,34 @@ class DataRecord(reference: String): RecordType<Data>(reference){
         ::innerData setAs value.innerData
     }
 
-    override fun createReference(reference: String) = DataRecord(reference)
 }
 
+object TestSchema: SurrealSchema(listOf(::UserRecord, ::ProductRecord, ::CategoryRecord, ::DataRecord), listOf(UserScope))
 
-object TestSchema: SurrealSchema(listOf(UserTable, ProductTable, CategoryTable, DataTable), listOf(UserScope))
 
-object UserScope: Scope<User, UserRecord, User, UserRecord>() {
+
+object UserScope: Scope<UserCredentials, UserCredentialsType, UserCredentials, UserCredentialsType, User, UserRecord>() {
     override val name: String = "user_session"
-    override val signupType = UserRecord("dummy")
-    override val signInType = UserRecord("dummy")
+    override val signupType = UserCredentialsType()
+    override val signInType = UserCredentialsType()
+    override val tokenType = UserRecord()
     override val sessionDuration: Duration = Duration.parse("2h")
 
-    override fun TransactionScope.signup(credentials: UserRecord): SurrealArray<User, UserRecord> {
-        return UserTable.create {
+    override fun TransactionScope.signup(credentials: UserCredentialsType): SurrealArray<User, UserRecord> {
+        return ::UserRecord.create {
             username setAs credentials.username
-            password setAs credentials.password
+            password setAs Crypto.Argon2.generate(credentials.password)
             products setAs listOf<RecordLink<Product, ProductRecord>>()
         }
     }
 
-    override fun TransactionScope.signIn(credentials: UserRecord): SurrealArray<User, UserRecord> {
-        return UserTable.selectAll {
-            where((username eq credentials.username) and (password eq credentials.password))
+    override fun TransactionScope.signIn(credentials: UserCredentialsType): SurrealArray<User, UserRecord> {
+        return ::UserRecord.selectAll {
+            where(
+                (username eq credentials.username)
+                    and
+                Crypto.Argon2.compare(password, credentials.password)
+            )
         }
     }
 }
