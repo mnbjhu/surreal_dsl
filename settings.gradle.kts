@@ -1,3 +1,3 @@
 
-rootProject.name = "surreal_sqeel"
+rootProject.name = "surreal_dsl"
 
