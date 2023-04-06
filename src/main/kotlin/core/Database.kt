@@ -1,9 +1,9 @@
 package core
 
-import InLine
-import RecordType
+import statements.InLine
+import types.Table
 import data.*
-import getDefinition
+import types.getDefinition
 import io.ktor.client.call.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
@@ -13,19 +13,20 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import scopes.Auth
+import scopes.NameSpace
+import scopes.TransactionScope
 import types.ReturnType
 
 data class Database(val nameSpace: NameSpace, val name: String){
     fun connectAsAdmin(username: String, password: String) = DatabaseConnection(this, Auth.Root(username, password))
 
-    suspend fun <a, A: ReturnType<a>, b, B: RecordType<b>>signIn( scope: Scope<*, *, b, B, *, *>, key: b): DatabaseConnection{
+    suspend fun <a, A: ReturnType<a>, b, B: Table<b>>signIn(scope: Scope<*, *, b, B, *, *>, key: b): DatabaseConnection{
         val response = client.post("http://${nameSpace.server.host}:${nameSpace.server.port}/signin"){
             contentType(ContentType.Application.Json)
             setBody("{\"ns\": \"${nameSpace.name}\",\"db\": \"${name}\",\"sc\": \"${scope.name}\", \"creds\":" + Json.encodeToString(scope.signInType.serializer, key)  + "}")
@@ -135,9 +136,9 @@ class DatabaseWebsocketConnection(val database: Database, val ws: WebSocketSessi
                 as List<ResultSetParser<Any?, KSerializer<Any?>>>
         val serializer = WebSocketResponseSerializer(ResultListSerializer(serializers))
         val response = sendQuery("query", transaction.getQueryString())
-        surrealJson.decodeFromString(serializer, response)
-        response as WebsocketResponse.Success<List<*>>
-        val r = response.result.first() as ResultSet<T>
+        val decoded = surrealJson.decodeFromString(serializer, response)
+        decoded as WebsocketResponse.Success<List<*>>
+        val r = decoded.result.first() as ResultSet<T>
         return r.result
     }
 
@@ -150,5 +151,6 @@ class DatabaseWebsocketConnection(val database: Database, val ws: WebSocketSessi
                 as List<ResultSetParser<Any?, KSerializer<Any?>>>
         val serializer = WebSocketResponseSerializer(ResultListSerializer(serializers))
         println(sendQuery("live", ""))
+        TODO("Waiting for live queries to be released")
     }
 }

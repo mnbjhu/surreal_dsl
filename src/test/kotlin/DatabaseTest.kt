@@ -1,6 +1,5 @@
-import core.Auth
 import core.SurrealSchema
-import core.SurrealServer
+import scopes.SurrealServer
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 

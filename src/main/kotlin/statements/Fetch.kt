@@ -1,6 +1,5 @@
 package statements
 
-import Statement
 import types.ReturnType
 import types.SurrealArray
 

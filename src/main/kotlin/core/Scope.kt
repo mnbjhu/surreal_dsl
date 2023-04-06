@@ -1,32 +1,10 @@
 package core
 
-import RecordType
-import types.BooleanType
+import scopes.TransactionScope
 import types.ReturnType
 import types.SurrealArray
 import kotlin.time.Duration
 
-/*
-open class Table<T, U: RecordType<T>>(val name: String, inner: U): SurrealArray<T, U>(inner){
-    constructor(name: String, type: TypeProducer<T, U>): this(name, type.createReference(name))
-    fun getDefinition(): String {
-        val fieldTypeBounds = inner.getFieldTypeBounds()
-        val permissionScope = PermissionScope()
-        permissionScope.permissions(inner)
-        return "DEFINE TABLE $name SCHEMAFULL" + permissionScope.tablePermissions.joinToString(prefix = " ") { it.getString() } + ";\n" + fieldTypeBounds.entries
-            .mapIndexedNotNull { index, it ->
-            if(it.key != ""){
-                if(index == 1){
-                    "DEFINE FIELD ${it.key} ON $name TYPE ${it.value}" + (permissionScope.fieldPermissions[it.key]?.getString() ?: "")
-                } else {
-                    "DEFINE FIELD ${it.key} ON $name TYPE ${it.value}"
-                }
-            } else null
-        }.joinToString(";\n", postfix = ";\n")
-    }
-}
-
- */
 
 abstract class Scope<a, A: ReturnType<a>, b, B: ReturnType<b>, c, C: ReturnType<c>> {
     abstract val name: String

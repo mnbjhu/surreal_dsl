@@ -1,19 +1,15 @@
-package core
+package scopes
 
-import FilterScope
-import InLine
-import RecordType
-import Statement
+import statements.InLine
+import types.Table
+import statements.Statement
+import core.Database
+import core.TypeProducer
 import data.*
-import io.ktor.client.call.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.client.utils.EmptyContent.contentType
-import io.ktor.http.*
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.builtins.serializer
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import statements.Let
 import statements.SelectStarFrom
@@ -38,7 +34,7 @@ class TransactionScope{
         return statements.joinToString(";\n"){ it.getQueryString() }
     }
 
-    fun <T, U: RecordType<T>>KFunction0<U>.selectAll(filter: context(FilterScope) U.() -> Unit = {}): SurrealArray<T, U> {
+    fun <T, U: Table<T>>KFunction0<U>.selectAll(filter: context(FilterScope) U.() -> Unit = {}): SurrealArray<T, U> {
         val instance = call().apply { withReference(tableName) }
         val filterText = FilterScope().apply { filter(instance) }.getString()
         val select = SelectStarFrom(instance, filterText)
@@ -50,7 +46,7 @@ class TransactionScope{
         return createReference(select.getQueryString())
     }
 
-    fun <T, U: RecordType<T>>KFunction0<U>.update(action: context(SetScope) U.() -> Unit): SurrealArray<T, U> {
+    fun <T, U: Table<T>>KFunction0<U>.update(action: context(SetScope) U.() -> Unit): SurrealArray<T, U> {
         val instance = call().apply { withReference(tableName) }
         val scope = SetScope()
         scope.action(instance)
@@ -71,19 +67,19 @@ class TransactionScope{
         return createReference("CREATE $ref ${scope.getString()}")
     }
 
-    fun <T, U: RecordType<T>>KFunction0<U>.create(action: context(SetScope) U.() -> Unit): SurrealArray<T, U> {
+    fun <T, U: Table<T>>KFunction0<U>.create(action: context(SetScope) U.() -> Unit): SurrealArray<T, U> {
         val scope = SetScope()
         val instance = call().apply { withReference(tableName) }
         scope.action(instance)
         return array(TypeProducer(instance)).createReference("CREATE ${instance.tableName} ${scope.getString()}")
     }
 
-    fun <T, U: RecordType<T>>KFunction0<U>.createContent(value: T): SurrealArray<T, U> {
+    fun <T, U: Table<T>>KFunction0<U>.createContent(value: T): SurrealArray<T, U> {
         val instance = call().apply { withReference(tableName) }
         return array(TypeProducer(instance)).createReference("CREATE ${instance.reference} CONTENT ${Json.encodeToString(instance.serializer, value)}")
     }
 
-    fun <T, U: RecordType<T>, a, A: ReturnType<a>>KFunction0<U>.select(projection: context(FilterScope) U.() -> A): SurrealArray<a, A> {
+    fun <T, U: Table<T>, a, A: ReturnType<a>>KFunction0<U>.select(projection: context(FilterScope) U.() -> A): SurrealArray<a, A> {
         val scope = FilterScope()
         val instance = call().apply { withReference(tableName) }
         val result = scope.projection(instance)
@@ -116,7 +112,7 @@ class TransactionScope{
         return this
     }
     /*
-    fun <T, U: RecordType<T>>Table<T, U>.createContent(value: T): SurrealArray<T, U> {
+    fun <T, U: RecordType<T>>types.Table<T, U>.createContent(value: T): SurrealArray<T, U> {
         return createReference("CREATE $reference CONTENT ${Json.encodeToString(inner.serializer, value)}")
     }
 

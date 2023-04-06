@@ -1,27 +1,16 @@
+package types
+
 import core.Permission
 import core.PermissionType
 import core.Scope
 import core.TypeProducer
-import types.*
 import kotlin.reflect.KProperty
 import kotlin.reflect.KFunction0
 import kotlin.reflect.full.primaryConstructor
 
-val recordTypes = mutableMapOf<String, TableSettings>()
-
-class TableSettings {
-    val permissions = mutableMapOf<PermissionType, MutableMap<Scope<*, *, *, *, *, *>, BooleanType>>()
-    val fieldSettings = mutableMapOf<String, FieldSettings>()
-}
-
-class FieldSettings {
-    val permissions = mutableMapOf<PermissionType, MutableMap<Scope<*, *, *, *, *, *>, BooleanType>>()
-    var assertions = mutableListOf<BooleanType>()
-}
-
-abstract class RecordType<T>(val tableName: String): SurrealObject<T>() {
+abstract class Table<T>(val tableName: String): SurrealObject<T>() {
     private val isFirstInstance = tableName !in recordTypes
-    abstract val id: RecordLink<T, RecordType<T>>
+    abstract val id: RecordLink<T, Table<T>>
     override operator fun <t, u: ReturnType<t>> TypeProducer<t, u>.getValue(thisRef: ReturnType<T>, property: KProperty<*>): u {
         if(isFirstInstance) {
             val fieldSettings = recordTypes.getOrPut(tableName){ TableSettings() }.fieldSettings.getOrPut(property.name) { FieldSettings() }
@@ -39,7 +28,7 @@ abstract class RecordType<T>(val tableName: String): SurrealObject<T>() {
     protected fun <T, U: ReturnType<T>>TypeProducer<T, U>.permissionFor(vararg actions: PermissionType, assertion: (U) -> BooleanType): TypeProducer<T, U>{
         if(isFirstInstance){
             if(settings == null) {
-                settings = FieldSettings()
+                settings = types.FieldSettings()
 
             }
             val inner = createReference("\$value")
@@ -67,10 +56,20 @@ abstract class RecordType<T>(val tableName: String): SurrealObject<T>() {
     }
 }
 
-data class FieldDefinition(val name: String, val type: String, val permissions: List<Permission>) {
+data class FieldDefinition(val name: String, val type: String, val permissions: List<Permission>)
+val recordTypes = mutableMapOf<String, TableSettings>()
 
+class TableSettings {
+    val permissions = mutableMapOf<PermissionType, MutableMap<Scope<*, *, *, *, *, *>, BooleanType>>()
+    val fieldSettings = mutableMapOf<String, FieldSettings>()
 }
-fun KFunction0<RecordType<*>>.getDefinition(): String {
+
+class FieldSettings {
+    val permissions = mutableMapOf<PermissionType, MutableMap<Scope<*, *, *, *, *, *>, BooleanType>>()
+    var assertions = mutableListOf<BooleanType>()
+}
+
+fun KFunction0<Table<*>>.getDefinition(): String {
     val inner = call().apply { withReference(tableName) }
     val fieldTypeBounds = inner.getFieldTypeBounds()
     val settings = recordTypes[inner.tableName]

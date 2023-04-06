@@ -1,6 +1,5 @@
 package statements
 
-import Statement
 import types.ReturnType
 
 class Let<T, U: ReturnType<T>>(private val key: String, private val value: U): Statement(){

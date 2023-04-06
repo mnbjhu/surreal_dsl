@@ -1,3 +1,5 @@
+package statements
+
 import types.ReturnType
 
 class InLine(private val value: ReturnType<*>): Statement(){

@@ -1,6 +1,5 @@
 package statements
 
-import Statement
 import types.ReturnType
 
 class SelectStarFrom(private val selector: ReturnType<*>, private val filter: String = ""): Statement(){

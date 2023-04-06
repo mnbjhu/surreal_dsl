@@ -1,6 +1,5 @@
 package statements
 
-import Statement
 import kotlinx.serialization.json.Json
 import types.ReturnType
 

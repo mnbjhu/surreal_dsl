@@ -1,6 +1,6 @@
 package core
 
-import FieldSettings
+import types.FieldSettings
 import types.ReturnType
 
 open class TypeProducer<T, U: ReturnType<T>>(private val dummy: U) {

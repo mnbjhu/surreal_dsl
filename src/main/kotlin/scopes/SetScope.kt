@@ -1,7 +1,7 @@
-package core
+package scopes
 
-import RecordType
-import kotlinx.serialization.builtins.ListSerializer
+import types.Table
+import core.Linked
 import kotlinx.serialization.json.Json
 import types.RecordLink
 import types.ReturnType
@@ -22,7 +22,7 @@ class SetScope {
         params[this] = value
     }
      */
-    infix fun <T, U: RecordType<T>> SurrealArray<Linked<T>, RecordLink<T, U>>.setAs(value: List<RecordLink<T, U>>){
+    infix fun <T, U: Table<T>> SurrealArray<Linked<T>, RecordLink<T, U>>.setAs(value: List<RecordLink<T, U>>){
         val ref = "[${value.joinToString { it.reference!! }}]"
         params[this] = createReference(ref)
     }

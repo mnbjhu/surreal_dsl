@@ -1,7 +1,7 @@
 package statements
 
 import core.Filter
-import SurrealComparable
+import core.SurrealComparable
 
 class OrderBy(private val by: List<SurrealComparable<*>>): Filter(){
     override fun getString(): String {

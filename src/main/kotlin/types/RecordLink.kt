@@ -1,6 +1,5 @@
 package types
 
-import RecordType
 import core.Linked
 import core.TypeProducer
 import kotlinx.serialization.KSerializer
@@ -9,13 +8,13 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.*
 import kotlin.reflect.KFunction0
 
-class RecordLink<T, out U: RecordType<T>>(private val inner: U, val hasDefinition: Boolean = true):
+class RecordLink<T, out U: Table<T>>(private val inner: U, val hasDefinition: Boolean = true):
     ReturnType<Linked<T>> {
     override var reference: String? = null
     val o: U
         get() = inner.createReference(reference!!) as U
     companion object {
-        // fun <T, U: RecordType<T>> Table<T, U>.idOf(key: String) = RecordLink(inner).withReference("$name:$key")
+        // fun <T, U: RecordType<T>> types.Table<T, U>.idOf(key: String) = RecordLink(inner).withReference("$name:$key")
 
     }
 
@@ -46,9 +45,9 @@ class RecordLink<T, out U: RecordType<T>>(private val inner: U, val hasDefinitio
 }
 
 
-fun <T, U: RecordType<T>>recordLink(to: U) = TypeProducer(RecordLink(to))
-fun <T, U: RecordType<T>>recordLink(to: KFunction0<U>) = TypeProducer(RecordLink(to.call().apply { withReference(tableName) }))
-fun <T, U: RecordType<T>>idOf(to: U) = TypeProducer(RecordLink(to, hasDefinition = false))
+fun <T, U: Table<T>>recordLink(to: U) = TypeProducer(RecordLink(to))
+fun <T, U: Table<T>>recordLink(to: KFunction0<U>) = TypeProducer(RecordLink(to.call().apply { withReference(tableName) }))
+fun <T, U: Table<T>>idOf(to: U) = TypeProducer(RecordLink(to, hasDefinition = false))
 
 /*
 sealed class RecordId<T> {

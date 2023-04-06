@@ -1,6 +1,6 @@
 package types
 
-import SurrealComparable
+import core.SurrealComparable
 import core.TypeProducer
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.KSerializer
