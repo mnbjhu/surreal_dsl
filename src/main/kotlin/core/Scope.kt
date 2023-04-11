@@ -17,7 +17,7 @@ abstract class Scope<a, A: ReturnType<a>, b, B: ReturnType<b>, c, C: ReturnType<
 
     abstract fun TransactionScope.signIn(credentials: B): SurrealArray<c, C>
 
-    fun getDefinition(): String{
+    fun getDefinition(): String {
         val transaction = TransactionScope()
         return with(transaction){"DEFINE SCOPE $name SESSION $sessionDuration \n" +
                 "   SIGNUP (${signup(signupType.createReference("\$creds") as A).reference})\n" +

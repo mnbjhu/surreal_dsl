@@ -1,7 +1,7 @@
 val ktor_version: String by project
 plugins {
-    kotlin("jvm") version "1.8.0"
-    kotlin("plugin.serialization") version "1.8.0"
+    kotlin("jvm") version "1.8.20"
+    kotlin("plugin.serialization") version "1.8.20"
 }
 
 group = "org.example"
@@ -21,7 +21,9 @@ dependencies {
     implementation("io.ktor:ktor-client-websockets:$ktor_version")
     testImplementation("org.amshove.kluent:kluent:1.72")
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.0-Beta")
     testImplementation(kotlin("test"))
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 tasks.test {

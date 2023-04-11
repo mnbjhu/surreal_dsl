@@ -37,7 +37,11 @@ class ResultSetParser<T, U: KSerializer<T>>(result: U): KSerializer<ResultSet<T>
                 }
             }
         }
-        return ResultSet(data as T, status!!, time!!)
+        return ResultSet(
+            data as T,
+            status!!,
+            time!!
+        )
     }
     override fun serialize(encoder: Encoder, value: ResultSet<T>) {
         val context = encoder.beginStructure(descriptor)

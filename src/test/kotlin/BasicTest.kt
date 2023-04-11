@@ -1,5 +1,8 @@
 import core.Linked
 import functions.eq
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.amshove.kluent.`should be equal to`
 import org.amshove.kluent.`should be instance of`
@@ -7,6 +10,7 @@ import org.amshove.kluent.`should contain same`
 import org.junit.jupiter.api.Test
 import types.RecordLink
 import types.getDefinition
+import kotlin.system.measureTimeMillis
 
 class BasicTest: DatabaseTest(TestSchema){
 
@@ -165,12 +169,45 @@ class BasicTest: DatabaseTest(TestSchema){
                 .namespace("test")
                 .database("test")
                 .signup(UserScope, UserCredentials("newtest123", "123"))
+            val connection = server
+                .namespace("test")
+                .database("test")
+                .websocket()
+            connection.signin(UserScope, UserCredentials("newtest123", "123"))
+            connection.transaction { ::UserTable.select { username } } `should contain same` listOf("newtest123")
+            delay(2000)
+
+        }
+    }
+
+    @Test
+    fun websocketTest2(){
+        runBlocking {
             server
                 .namespace("test")
                 .database("test")
-                .signInToWebsocket(UserScope, UserCredentials("newtest123", "123"))
-                .transaction { ::UserTable.select { username } } `should contain same` listOf("newtest123")
-
+                .signup(UserScope, UserCredentials("newtest123", "123"))
+            val connection = server
+                .namespace("test")
+                .database("test")
+        }
+    }
+    @Test
+    fun timedTest(){
+        runBlocking {
+            server
+                .namespace("test")
+                .database("test")
+                .signup(UserScope, UserCredentials("newtest123", "123"))
+            val connection = server
+                .namespace("test")
+                .database("test")
+                .websocket().apply { signin(UserScope, UserCredentials("newtest123", "123")) }
+            measureTimeMillis {
+                (1..1).map {
+                    async { connection.transaction { ::UserTable.createContent(User("TestUser$it", "password")) }}
+                }.awaitAll()
+            }.also { println(it) }
         }
     }
 

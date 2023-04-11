@@ -12,7 +12,7 @@ val surrealJson = Json { ignoreUnknownKeys = true }
 
 val client = HttpClient(CIO){
     install(ContentNegotiation){
-        json()
+        json(surrealJson)
     }
     install(WebSockets)
 }

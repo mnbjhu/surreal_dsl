@@ -8,7 +8,7 @@ import kotlinx.serialization.builtins.serializer
 abstract class Primitive<T>: ReturnType<T> {
     override var reference: String? = null
 }
-open class StringType(): Primitive<String>(), SurrealComparable<String> {
+open class StringType: Primitive<String>(), SurrealComparable<String> {
 
     override val serializer: KSerializer<String> = String.serializer()
 

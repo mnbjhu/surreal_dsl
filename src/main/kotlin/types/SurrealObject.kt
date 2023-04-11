@@ -39,8 +39,7 @@ abstract class SurrealObject<T>(): ReturnType<T> {
         return this::class.primaryConstructor!!.call().withReference(reference)
     }
     override val serializer: KSerializer<T>
-        get() =
-        object: KSerializer<T>{
+        get() = object: KSerializer<T>{
             override val descriptor: SerialDescriptor by lazy {
                 buildClassSerialDescriptor(reference!!){
                     members.forEach {
